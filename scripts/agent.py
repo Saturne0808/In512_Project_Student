@@ -65,55 +65,55 @@ class Agent:
     #TODO: CREATE YOUR METHODS HERE...
 
     #added : 
-    def map_division(self):
+    def map_division(self): #Fonctionnel
         """ Method used to divide the map among agents """
-        x = self.h
-        y = self.w
+        x = self.w
+        y = self.h
         if self.nb_agent_expected == 2: 
-            y = self.w // 2
-            x = self.h
+            y = self.h 
+            x = self.w //2
         elif self.nb_agent_expected == 3:
-            y = self.w // 3
-            x = self.h
+            y = self.h 
+            x = self.w //3
         elif self.nb_agent_expected == 4:
-            y = self.w // 2
-            x = self.h // 2
+            y = self.h // 2
+            x = self.w // 2
         return x, y  
     
-    def choose_map_division(self):
+    def choose_map_division(self): #Fonctionnel
         x,y = self.map_division()
         limit_x = (0, self.w)
         limit_y = (0, self.h)
         if self.nb_agent_expected == 2:
             if self.agent_id == 0:
                 limit_x = (0, x)
-                limit_y = (0, self.h)
+                limit_y = (0, y)
             else:
-                limit_x = (x, self.w)
-                limit_y = (0, self.h)
+                limit_x = (x, x*2)
+                limit_y = (0, y)
         elif self.nb_agent_expected == 3:
             if self.agent_id == 0:
                 limit_x = (0, x)
-                limit_y = (0, self.h)
+                limit_y = (0, y)
             elif self.agent_id == 1:
-                limit_x = (x, 2*x)
-                limit_y = (0, self.h)
+                limit_x = (x, x*2)
+                limit_y = (0, y)
             else:
-                limit_x = (2*x, self.w)
-                limit_y = (0, self.h)
+                limit_x = (x*2, x*3)
+                limit_y = (0, y)
         elif self.nb_agent_expected == 4:
             if self.agent_id == 0:
                 limit_x = (0, x)
                 limit_y = (0, y)
             elif self.agent_id == 1:
-                limit_x = (x, self.w)
+                limit_x = (x, x*2)
                 limit_y = (0, y)
             elif self.agent_id == 2:
                 limit_x = (0, x)
-                limit_y = (y, self.h)
+                limit_y = (y, y*2)
             else:
-                limit_x = (x, self.w)
-                limit_y = (y, self.h)
+                limit_x = (x, x*2)
+                limit_y = (y, y*2)
         return limit_x, limit_y
 
 
@@ -140,13 +140,11 @@ class Agent:
         neighbors = []
         for ddx, ddy in moves.values():
             nx, ny = self.x + ddx, self.y + ddy
-            if 0 <= nx < self.w and 0 <= ny < self.h:
+            if limit_x1 <= nx < limit_x2 and limit_y1 <= ny < limit_y2:
                 neighbors.append((nx, ny))
 
         #si il est entourer de voisins dans le path
         blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
-        print("blocked: ", blocked)
-
         if x < limit_x1 or x >= limit_x2 or y < limit_y1 or y >= limit_y2 and (x, y) != ((limit_x1,limit_y1) or (limit_x2-1, limit_y2-1) or (limit_x1, limit_y2-1) or (limit_x2-1, limit_y1)):
             print("je suis dans les limites avec ", x, y)
             movement = 0   #STAND
@@ -178,12 +176,12 @@ if __name__ == "__main__":
 
     agent = Agent(args.server_ip)
     try : 
+        sleep(5)  #wait for all agents to be connected
         limit_x, limit_y = agent.choose_map_division()
         limit_x1 = limit_x[0]
         limit_x2 = limit_x[1]
         limit_y1 = limit_y[0]
         limit_y2 = limit_y[1]
-        print("salut")
         while True: 
             agent.move_agent(limit_x1, limit_x2, limit_y1, limit_y2)
         try:    #Manual control test0
