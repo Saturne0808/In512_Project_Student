@@ -29,6 +29,10 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
+        ##################ADD : 
+        self.path = [(self.x, self.y)]
+
+        ###################
         print(cell_val)
         Thread(target=self.msg_cb, daemon=True).start()
         print("hello")
@@ -60,9 +64,77 @@ class Agent:
                 print("both connected!")
                 check_conn_agent = False
 
-                  
-
     #TODO: CREATE YOUR METHODS HERE...
+
+    #added : 
+    def map_division(self):
+        """ Method used to divide the map among agents """
+        if self.nb_agent_expected == 2: 
+            y = self.w // 2
+            x = self.h
+        elif self.nb_agent_expected == 3:
+            y = self.w // 3
+            x = self.h
+        elif self.nb_agent_expected == 4:
+            y = self.w // 2
+            x = self.h // 2
+        return x, y  
+    
+    def choose_map_division(self):
+        x,y = map_division(self)
+        if self.nb_agent_expected == 2:
+            if self.agent_id == 0:
+                return (0, self.w // 2, 0, self.h)  # Left half
+            else:
+                return (self.w // 2, self.w, 0, self.h)  # Right half
+            
+   
+
+
+    def move_agent(self):
+        """ Method used to move the agent in the environment """
+        x = self.x
+        y = self.y
+        movement = randint(1,8)
+        moves = {
+            1: (-1, 0),  # LEFT
+            2: (1, 0),   # RIGHT
+            3: (0, -1),  # UP
+            4: (0, 1),   # DOWN
+            5: (-1, -1), # UP-LEFT
+            6: (1, -1),  # UP-RIGHT
+            7: (-1, 1),  # DOWN-LEFT
+            8: (1, 1),   # DOWN-RIGHT
+        }
+        dx, dy = moves.get(movement, (0,0))
+        x = self.x + dx
+        y = self.y + dy
+        
+        #test des voisins pr check qu'il y a des dispo
+        neighbors = []
+        for ddx, ddy in moves.values():
+            nx, ny = self.x + ddx, self.y + ddy
+            if 0 <= nx < self.w and 0 <= ny < self.h:
+                neighbors.append((nx, ny))
+
+        #si il est entourer de voisins dans le path
+        blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
+        print("blocked: ", blocked)
+
+        if x < 0 or x >= self.w or y < 0 or y >= self.h and (x, y) != ((0,0) or (self.w-1, self.h-1) or (0, self.h-1) or (self.w-1, 0)):
+            print("je suis dans les limites avec ", x, y)
+            movement = 0   #STAND
+            print("movement: ", movement, "my position: ", self.x, self.y)
+        elif (x, y) in self.path and not blocked :
+            movement = 0   #STAND
+            print("je suis dans le path ", x, y)
+            print("movement: ", movement, "my position: ", self.x, self.y)
+        else:
+            self.network.send({"header": MOVE, "direction": movement})
+            print("movement: ", movement, "my position: ", self.x, self.y)
+        self.path.append((self.x, self.y))
+        sleep(0.2)
+                 
 
             
  
@@ -74,20 +146,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     agent = Agent(args.server_ip)
-    
-    try:    #Manual control test0
-        while True:
-            cmds = {"header": int(input("0 <-> Broadcast msg\n1 <-> Get data\n2 <-> Move\n3 <-> Get nb connected agents\n4 <-> Get nb agents\n5 <-> Get item owner\n"))}
-            if cmds["header"] == BROADCAST_MSG:
-                cmds["Msg type"] = int(input("1 <-> Key discovered\n2 <-> Box discovered\n3 <-> Completed\n"))
-                cmds["position"] = (agent.x, agent.y)
-                cmds["owner"] = randint(0,3) # TODO: specify the owner of the item
-            elif cmds["header"] == MOVE:
-                cmds["direction"] = int(input("0 <-> Stand\n1 <-> Left\n2 <-> Right\n3 <-> Up\n4 <-> Down\n5 <-> UL\n6 <-> UR\n7 <-> DL\n8 <-> DR\n"))
-            agent.network.send(cmds)
+    try : 
+        while True: 
+            agent.move_agent()
+        try:    #Manual control test0
+            while True:
+                cmds = {"header": int(input("0 <-> Broadcast msg\n1 <-> Get data\n2 <-> Move\n3 <-> Get nb connected agents\n4 <-> Get nb agents\n5 <-> Get item owner\n"))}
+                if cmds["header"] == BROADCAST_MSG:
+                    cmds["Msg type"] = int(input("1 <-> Key discovered\n2 <-> Box discovered\n3 <-> Completed\n"))
+                    cmds["position"] = (agent.x, agent.y)
+                    cmds["owner"] = randint(0,3) # TODO: specify the owner of the item
+                elif cmds["header"] == MOVE:
+                    cmds["direction"] = int(input("0 <-> Stand\n1 <-> Left\n2 <-> Right\n3 <-> Up\n4 <-> Down\n5 <-> UL\n6 <-> UR\n7 <-> DL\n8 <-> DR\n"))
+                agent.network.send(cmds)
+        except KeyboardInterrupt:
+            pass
     except KeyboardInterrupt:
         pass
+
 # it is always the same location of the agent first location
-
-
-
