@@ -81,17 +81,33 @@ class Agent:
         return x, y  
     
     def choose_map_division(self):
-        x,y = map_division(self)
+        x,y = self.map_division()
         if self.nb_agent_expected == 2:
             if self.agent_id == 0:
-                return (0, self.w // 2, 0, self.h)  # Left half
+                return ([0, x], [0, y])  
             else:
-                return (self.w // 2, self.w, 0, self.h)  # Right half
+                return ([x,x*2], [0, y])  
+        elif self.nb_agent_expected == 3:
+            if self.agent_id == 0:
+                return ([0, x], [0, y])  
+            elif self.agent_id == 1:
+                return ([x, x*2], [0, y])  
+            else:
+                return ([x*2, x*3], [0, y])
+        elif self.nb_agent_expected == 4:
+            if self.agent_id == 0:
+                return ([0, x], [0, y])  
+            elif self.agent_id == 1:
+                return ([x, x*2], [0, y])  
+            elif self.agent_id == 2:
+                return ([0, x], [y, y*2])  
+            else:
+                return ([x, x*2], [y, y*2])
             
    
 
 
-    def move_agent(self):
+    def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
         """ Method used to move the agent in the environment """
         x = self.x
         y = self.y
@@ -121,7 +137,7 @@ class Agent:
         blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
         print("blocked: ", blocked)
 
-        if x < 0 or x >= self.w or y < 0 or y >= self.h and (x, y) != ((0,0) or (self.w-1, self.h-1) or (0, self.h-1) or (self.w-1, 0)):
+        if x < limit_x1 or x >= limit_x2 or y < limit_y1 or y >= limit_y2 and (x, y) != ((limit_x1,limit_y1) or (limit_x2-1, limit_y2-1) or (limit_x1, limit_y2-1) or (limit_x2-1, limit_y1)):
             print("je suis dans les limites avec ", x, y)
             movement = 0   #STAND
             print("movement: ", movement, "my position: ", self.x, self.y)
@@ -147,8 +163,13 @@ if __name__ == "__main__":
 
     agent = Agent(args.server_ip)
     try : 
+        limit_x, limit_y = agent.choose_map_division()
+        limit_x1 = limit_x[0]
+        limit_x2 = limit_x[1]
+        limit_y1 = limit_y[0]
+        limit_y2 = limit_y[1]
         while True: 
-            agent.move_agent()
+            agent.move_agent(limit_x1, limit_x2, limit_y1, limit_y2)
         try:    #Manual control test0
             while True:
                 cmds = {"header": int(input("0 <-> Broadcast msg\n1 <-> Get data\n2 <-> Move\n3 <-> Get nb connected agents\n4 <-> Get nb agents\n5 <-> Get item owner\n"))}
