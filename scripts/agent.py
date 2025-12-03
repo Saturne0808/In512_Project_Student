@@ -117,7 +117,7 @@ class Agent:
         return limit_x, limit_y
 
 
-    def move_agent(self):
+    def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
         """ Method used to move the agent in the environment """
         x = self.x
         y = self.y
@@ -183,6 +183,7 @@ if __name__ == "__main__":
         limit_x2 = limit_x[1]
         limit_y1 = limit_y[0]
         limit_y2 = limit_y[1]
+        print("salut")
         while True: 
             agent.move_agent(limit_x1, limit_x2, limit_y1, limit_y2)
         try:    #Manual control test0
