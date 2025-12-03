@@ -79,14 +79,38 @@ class Agent:
         return x, y  
     
     def choose_map_division(self):
-        x,y = map_division(self)
+        x,y = self.map_division(self)
         if self.nb_agent_expected == 2:
             if self.agent_id == 0:
-                return (0, self.w // 2, 0, self.h)  # Left half
+                limit_x = (0, x)
+                limit_y = (0, self.h)
             else:
-                return (self.w // 2, self.w, 0, self.h)  # Right half
-            
-   
+                limit_x = (x, self.w)
+                limit_y = (0, self.h)
+        elif self.nb_agent_expected == 3:
+            if self.agent_id == 0:
+                limit_x = (0, x)
+                limit_y = (0, self.h)
+            elif self.agent_id == 1:
+                limit_x = (x, 2*x)
+                limit_y = (0, self.h)
+            else:
+                limit_x = (2*x, self.w)
+                limit_y = (0, self.h)
+        elif self.nb_agent_expected == 4:
+            if self.agent_id == 0:
+                limit_x = (0, x)
+                limit_y = (0, y)
+            elif self.agent_id == 1:
+                limit_x = (x, self.w)
+                limit_y = (0, y)
+            elif self.agent_id == 2:
+                limit_x = (0, x)
+                limit_y = (y, self.h)
+            else:
+                limit_x = (x, self.w)
+                limit_y = (y, self.h)
+        return limit_x, limit_y
 
 
     def move_agent(self):
