@@ -29,10 +29,8 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
-        ##################ADD : 
+        #ADD : 
         self.path = [(self.x, self.y)]
-
-        ###################
         print(cell_val)
         Thread(target=self.msg_cb, daemon=True).start()
         print("hello")
@@ -81,33 +79,17 @@ class Agent:
         return x, y  
     
     def choose_map_division(self):
-        x,y = self.map_division()
+        x,y = map_division(self)
         if self.nb_agent_expected == 2:
             if self.agent_id == 0:
-                return ([0, x], [0, y])  
+                return (0, self.w // 2, 0, self.h)  # Left half
             else:
-                return ([x,x*2], [0, y])  
-        elif self.nb_agent_expected == 3:
-            if self.agent_id == 0:
-                return ([0, x], [0, y])  
-            elif self.agent_id == 1:
-                return ([x, x*2], [0, y])  
-            else:
-                return ([x*2, x*3], [0, y])
-        elif self.nb_agent_expected == 4:
-            if self.agent_id == 0:
-                return ([0, x], [0, y])  
-            elif self.agent_id == 1:
-                return ([x, x*2], [0, y])  
-            elif self.agent_id == 2:
-                return ([0, x], [y, y*2])  
-            else:
-                return ([x, x*2], [y, y*2])
+                return (self.w // 2, self.w, 0, self.h)  # Right half
             
    
 
 
-    def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
+    def move_agent(self):
         """ Method used to move the agent in the environment """
         x = self.x
         y = self.y
@@ -150,6 +132,11 @@ class Agent:
             print("movement: ", movement, "my position: ", self.x, self.y)
         self.path.append((self.x, self.y))
         sleep(0.2)
+
+        def box_key_pattern(self):
+            
+  
+            return 0
                  
 
             
