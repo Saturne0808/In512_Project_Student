@@ -29,6 +29,7 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
+        self.cell_val = cell_val
         #ADD : 
         self.path = [(self.x, self.y)]
         print(cell_val)
@@ -153,16 +154,59 @@ class Agent:
             movement = 0   #STAND
             print("je suis dans le path ", x, y)
             print("movement: ", movement, "my position: ", self.x, self.y)
+
+        elif self.cell_val == BOX_NEIGHBOUR_PERCENTAGE:
+            print("je suis proche d'une box")
+            # pattern de recherche de la box dans le voisinage 1 (8 directions)
+            self.search_box_around()
+            # on sort ici pour ne pas envoyer un move aléatoire en plus
+            self.path.append((self.x, self.y))
+            sleep(0.2)
+            return
+
+
+        elif self.cell_val == KEY_NEIGHBOUR_PERCENTAGE:
+            print("je suis proche d'une key")
+            self.box_key_pattern()
+
         else:
             self.network.send({"header": MOVE, "direction": movement})
             print("movement: ", movement, "my position: ", self.x, self.y)
         self.path.append((self.x, self.y))
         sleep(0.2)
 
-        def box_key_pattern(self):
-            
-  
-            return 0
+
+    def request_item_owner(self):
+        """Demande synchrone au jeu quel est l'item sous le robot."""
+        self.network.send({"header": GET_ITEM_OWNER})
+        # on attend la réponse correspondante de façon simple
+        while True:
+            msg = self.msg
+            if msg.get("header") == GET_ITEM_OWNER:
+                return msg
+            sleep(0.05)
+
+
+    def search_box_around(self):
+        """Teste les 8 cases autour dans l'ordre 1->8 et s'arrête dès qu'il trouve la box."""
+        # mêmes directions que dans Game.moves :
+        directions = [1, 2, 3, 4, 5, 6, 7, 8]
+        for d in directions:
+            self.network.send({"header": MOVE, "direction": d})
+            # on laisse le temps à msg_cb de mettre à jour x, y, cell_val
+            sleep(0.2)
+            # si on est sur une case valeur 1.0, on vérifie que c'est une box
+            if self.cell_val == 1.0:
+                info = self.request_item_owner()
+                if (info.get("type") == BOX_TYPE):
+                    print("Box trouvée en", self.x, self.y)
+                    break
+
+ 
+
+
+        
+        
                  
 
             
