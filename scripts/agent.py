@@ -29,10 +29,8 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
-        ##################ADD : 
+        #ADD : 
         self.path = [(self.x, self.y)]
-
-        ###################
         print(cell_val)
         Thread(target=self.msg_cb, daemon=True).start()
         print("hello")
@@ -67,30 +65,7 @@ class Agent:
     #TODO: CREATE YOUR METHODS HERE...
 
     #added : 
-    def map_division(self):
-        """ Method used to divide the map among agents """
-        if self.nb_agent_expected == 2: 
-            y = self.w // 2
-            x = self.h
-        elif self.nb_agent_expected == 3:
-            y = self.w // 3
-            x = self.h
-        elif self.nb_agent_expected == 4:
-            y = self.w // 2
-            x = self.h // 2
-        return x, y  
     
-    def choose_map_division(self):
-        x,y = map_division(self)
-        if self.nb_agent_expected == 2:
-            if self.agent_id == 0:
-                return (0, self.w // 2, 0, self.h)  # Left half
-            else:
-                return (self.w // 2, self.w, 0, self.h)  # Right half
-            
-   
-
-
     def move_agent(self):
         """ Method used to move the agent in the environment """
         x = self.x
@@ -134,6 +109,11 @@ class Agent:
             print("movement: ", movement, "my position: ", self.x, self.y)
         self.path.append((self.x, self.y))
         sleep(0.2)
+
+        def box_key_pattern(self):
+            
+  
+            return 0
                  
 
             
