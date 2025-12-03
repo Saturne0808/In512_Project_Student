@@ -67,6 +67,8 @@ class Agent:
     #added : 
     def map_division(self):
         """ Method used to divide the map among agents """
+        x = self.h
+        y = self.w
         if self.nb_agent_expected == 2: 
             y = self.w // 2
             x = self.h
@@ -79,7 +81,9 @@ class Agent:
         return x, y  
     
     def choose_map_division(self):
-        x,y = self.map_division(self)
+        x,y = self.map_division()
+        limit_x = (0, self.w)
+        limit_y = (0, self.h)
         if self.nb_agent_expected == 2:
             if self.agent_id == 0:
                 limit_x = (0, x)
