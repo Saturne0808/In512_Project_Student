@@ -66,6 +66,63 @@ class Agent:
     #TODO: CREATE YOUR METHODS HERE...
 
     #added : 
+    #Partie de martin
+    def agent_management(self):
+        """
+        Stop Agent's observation when all items are detected and registered, and start a_start to reach keys and boxes
+        """
+        sleep(1)
+        self.total_objects = self.nb_agent_expected * 2
+        print(len(self.detected_items), " items detected so far.")
+        print(self.total_objects, " items to be detected in total.")
+           
+        # continue exploration until all items have been found
+        while len(self.detected_items) < self.total_objects:
+
+            # agent continue to move
+            self.move_agent()
+            
+            # Request item owner info
+            self.network.send({"header": GET_ITEM_OWNER})
+
+            # Get item owner response
+            item_response = self.wait_for_response(GET_ITEM_OWNER)
+            owner = item_response.get("owner")
+            item_type = item_response.get("type")
+
+            # If agent is on an item 
+            if owner is not None and item_type is not None:
+                print("I'm here - 3")
+                # Get current item coordinates
+                item_coords = (self.x, self.y)
+                
+                # Check if item already registered
+                already_registered = any(item[0] == item_coords[0] and item[1] == item_coords[1] for item in self.detected_items)
+                
+                if not already_registered:
+                    # rgister the item
+                    self.detected_items.append((item_coords[0], item_coords[1], owner, item_type))
+                    
+                    # Store in list for each type of item
+                    if item_type == KEY_TYPE:
+                        self.KEYS_coordonates.append((item_coords, owner))
+                        print(f"KEY discovered at {item_coords}, owner: {owner}")
+
+                    elif item_type == BOX_TYPE:
+                        self.BOXES_coordonates.append((item_coords, owner))
+                        print(f"BOX discovered at {item_coords}, owner: {owner}")
+            else:
+                continue  # No item found, continue exploration
+        
+        # All items have been found => exploration is completed
+        print("All items have been found => exploration phase complete")
+        print(f"Keys found: {self.KEYS_coordonates}")
+        print(f"Boxes found: {self.BOXES_coordonates}")
+        
+        # NOW Implement A* algorithm to:
+        # 1. Go to key
+        # 2. Go to box
+
     def map_division(self): #Fonctionnel
         """ Method used to divide the map among agents """
         x = self.w
