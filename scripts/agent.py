@@ -17,6 +17,17 @@ class Agent:
     def __init__(self, server_ip):
         #TODO: DEINE YOUR ATTRIBUTES HERE
 
+        self.move_to_str = {
+            (-1, 0): LEFT,  # LEFT
+            (1, 0): RIGHT,   # RIGHT
+            (0, -1): UP,  # UP
+            (0, 1): DOWN,   # DOWN
+            (-1, -1): UP_LEFT, # UP-LEFT
+            (1, -1): UP_RIGHT,  # UP-RIGHT
+            (-1, 1): DOWN_LEFT,  # DOWN-LEFT
+            (1, 1): DOWN_RIGHT,   # DOWN-RIGHT
+        }
+
         #DO NOT TOUCH THE FOLLOWING INSTRUCTIONS
         self.network = Network(server_ip=server_ip)
         self.agent_id = self.network.id
@@ -67,6 +78,55 @@ class Agent:
 
             
 #added : 
+    #algo d'évitement d'obstacle
+    def go_to_goal(self, goal):
+        while self.x != goal[0] and self.y != goal[1] and self.running:
+            dx = goal[0] - self.x
+            dy = goal[1] - self.y
+            d = np.sqrt((goal[0] - self.x)**2 + ((goal[1] - self.y)**2))
+            denom = d/2
+            move = (int(dx/denom), int(dy/denom))
+            #if there is a wall
+            if self.cell_val == 0.3:
+                go_back = (previous_move[0]*(-1), previous_move[1]*(-1))
+                move = go_back
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                #go back 2 times
+                self.network.send(cmds)
+                sleep(0.5)
+                self.network.send(cmds)
+                sleep(0.5)
+
+
+
+                #compute avoiding direction in function of the previous move
+                avoid_direction_x = (dx/abs(dx))
+                avoid_direction_y = (dy/abs(dy))
+
+                if previous_move[0] == 0:
+                    avoid_direction = (avoid_direction_x,0)
+                elif previous_move[1] == 0:
+                    avoid_direction = (0,avoid_direction_y)
+                else:
+                    if dy > dx:
+                        avoid_direction = (0,avoid_direction_y)
+                    else:
+                        avoid_direction = (avoid_direction_x, 0)
+                
+
+                move = avoid_direction
+                direction = self.move_to_str[move]
+                
+                for i in range(1):
+                    cmds = {"header": MOVE, "direction": direction}
+                    #do avoiding direction
+                    self.network.send(cmds)
+
+                    sleep(0.5)
+
+                    #if avoiding direction is obstacle, change the avoiding direction
+                    if self.cell_val == 0.3:
                         break
                         # move = (avoid_direction[0]*(-1), avoid_direction[1]*(-1))
                         # direction = self.move_to_str[move]

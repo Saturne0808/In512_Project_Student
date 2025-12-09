@@ -11,7 +11,7 @@ img_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 
 
 class GUI:
-    def __init__(self, game, fps=10, cell_size=40):
+    def __init__(self, game, fps=10, cell_size=30):
         self.game = game
         self.w, self.h = self.game.map_w, self.game.map_h
         self.fps = fps
