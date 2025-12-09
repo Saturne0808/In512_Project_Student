@@ -67,6 +67,24 @@ class Agent:
 
             
 #added : 
+                        break
+                        # move = (avoid_direction[0]*(-1), avoid_direction[1]*(-1))
+                        # direction = self.move_to_str[move]
+                    
+
+
+            else:
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                self.network.send(cmds)
+
+            previous_move = move
+            #print(self.msg)
+
+            sleep(1)
+
+
+
     #Partie de martin
     def agent_management(self):
         """
