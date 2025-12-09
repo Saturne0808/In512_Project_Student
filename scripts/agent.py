@@ -29,6 +29,9 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
+        self.cell_val = cell_val
+        #ADD : 
+        self.path = [(self.x, self.y)]
         print(cell_val)
         Thread(target=self.msg_cb, daemon=True).start()
         print("hello")
@@ -59,8 +62,6 @@ class Agent:
             if self.nb_agent_expected == self.nb_agent_connected:
                 print("both connected!")
                 check_conn_agent = False
-
-                  
 
     #TODO: CREATE YOUR METHODS HERE...
 
