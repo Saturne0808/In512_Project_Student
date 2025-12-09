@@ -87,7 +87,7 @@ class Agent:
             denom = d/2
             move = (int(dx/denom), int(dy/denom))
             #if there is a wall
-            if self.cell_val == 0.3:
+            if self.cell_val == 0.35:
                 go_back = (previous_move[0]*(-1), previous_move[1]*(-1))
                 move = go_back
                 direction = self.move_to_str[move]
@@ -97,7 +97,6 @@ class Agent:
                 sleep(0.5)
                 self.network.send(cmds)
                 sleep(0.5)
-
 
 
                 #compute avoiding direction in function of the previous move
@@ -118,7 +117,7 @@ class Agent:
                 move = avoid_direction
                 direction = self.move_to_str[move]
                 
-                for i in range(1):
+                for i in range(2):
                     cmds = {"header": MOVE, "direction": direction}
                     #do avoiding direction
                     self.network.send(cmds)
@@ -126,7 +125,7 @@ class Agent:
                     sleep(0.5)
 
                     #if avoiding direction is obstacle, change the avoiding direction
-                    if self.cell_val == 0.3:
+                    if self.cell_val == 0.35:
                         break
                         # move = (avoid_direction[0]*(-1), avoid_direction[1]*(-1))
                         # direction = self.move_to_str[move]
@@ -200,7 +199,9 @@ class Agent:
         
         # NOW Implement A* algorithm to:
         # 1. Go to key
+        self.go_to_goal(self.KEYS_coordonates)
         # 2. Go to box
+        self.go_to_goal(self.BOXES_coordonates)
 
     def map_division(self): #Fonctionnel
         """ Method used to divide the map among agents """
