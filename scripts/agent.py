@@ -29,10 +29,19 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
-        self.cell_val = cell_val
+        self.cell_val = float(cell_val)
         #ADD : 
         self.path = [(self.x, self.y)]
-        print(cell_val)
+
+        # basic memories for discovered items
+        self.detected_items = []
+        self.KEYS_coordonates = []
+        self.BOXES_coordonates = []
+        self.foreign_items = set()  
+        self.positions = set() 
+        self.my_key_found = False  
+        self.my_box_found = False
+
         Thread(target=self.msg_cb, daemon=True).start()
         print("hello")
         self.wait_for_connected_agent()
@@ -45,14 +54,17 @@ class Agent:
             self.msg = msg
             if msg["header"] == MOVE:
                 self.x, self.y =  msg["x"], msg["y"]
-                print(self.x, self.y)
+                #print(self.x, self.y)
             elif msg["header"] == GET_NB_AGENTS:
                 self.nb_agent_expected = msg["nb_agents"]
             elif msg["header"] == GET_NB_CONNECTED_AGENTS:
                 self.nb_agent_connected = msg["nb_connected_agents"]
 
-            print("hellooo: ", msg)
-            print("agent_id ", self.agent_id)
+            if "cell_val" in msg:
+                self.cell_val = msg["cell_val"]
+
+            #print("hellooo: ", msg)
+            #print("agent_id ", self.agent_id)
             
 
     def wait_for_connected_agent(self):
@@ -73,8 +85,8 @@ class Agent:
         """
         sleep(1)
         self.total_objects = self.nb_agent_expected * 2
-        print(len(self.detected_items), " items detected so far.")
-        print(self.total_objects, " items to be detected in total.")
+        #print(len(self.detected_items), " items detected so far.")
+        #print(self.total_objects, " items to be detected in total.")
            
         # continue exploration until all items have been found
         while len(self.detected_items) < self.total_objects:
@@ -115,9 +127,9 @@ class Agent:
                 continue  # No item found, continue exploration
         
         # All items have been found => exploration is completed
-        print("All items have been found => exploration phase complete")
-        print(f"Keys found: {self.KEYS_coordonates}")
-        print(f"Boxes found: {self.BOXES_coordonates}")
+        # print("All items have been found => exploration phase complete")
+        # print(f"Keys found: {self.KEYS_coordonates}")
+        # print(f"Boxes found: {self.BOXES_coordonates}")
         
         # NOW Implement A* algorithm to:
         # 1. Go to key
@@ -195,6 +207,7 @@ class Agent:
         y = self.y + dy
         
         #test des voisins pr check qu'il y a des dispo
+        print("cell_val", self.cell_val)
         neighbors = []
         for ddx, ddy in moves.values():
             nx, ny = self.x + ddx, self.y + ddy
@@ -203,32 +216,41 @@ class Agent:
 
         #si il est entourer de voisins dans le path
         blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
+
+        if self.cell_val == 0.25 or self.cell_val == 0.3:
+            # if case already discovered
+            if self.avoid_pattern():
+                print(f"PATTERN IGNORED")
+                
+                # if closed to box
+            elif self.cell_val == 0.3:
+                #print("je suis proche d'une box")
+                self.search_box_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
+                self.path.append((self.x, self.y))
+                sleep(0.2)
+                return
+
+                #if closed to key
+            elif self.cell_val == 0.25:
+                #print("je suis proche d'une key")
+                self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
+                self.path.append((self.x, self.y))
+                sleep(0.2)
+                return
+
         if x < limit_x1 or x >= limit_x2 or y < limit_y1 or y >= limit_y2 and (x, y) != ((limit_x1,limit_y1) or (limit_x2-1, limit_y2-1) or (limit_x1, limit_y2-1) or (limit_x2-1, limit_y1)):
-            print("je suis dans les limites avec ", x, y)
+            #print("je suis dans les limites avec ", x, y)
             movement = 0   #STAND
-            print("movement: ", movement, "my position: ", self.x, self.y)
+            #print("movement: ", movement, "my position: ", self.x, self.y)
         elif (x, y) in self.path and not blocked :
             movement = 0   #STAND
-            print("je suis dans le path ", x, y)
-            print("movement: ", movement, "my position: ", self.x, self.y)
+            #print("je suis dans le path ", x, y)
+            #print("movement: ", movement, "my position: ", self.x, self.y)
 
-        elif self.cell_val == BOX_NEIGHBOUR_PERCENTAGE:
-            print("je suis proche d'une box")
-            # pattern de recherche de la box dans le voisinage 1 (8 directions)
-            self.search_box_around()
-            # on sort ici pour ne pas envoyer un move aléatoire en plus
-            self.path.append((self.x, self.y))
-            sleep(0.2)
-            return
-
-
-        elif self.cell_val == KEY_NEIGHBOUR_PERCENTAGE:
-            print("je suis proche d'une key")
-            self.box_key_pattern()
 
         else:
             self.network.send({"header": MOVE, "direction": movement})
-            print("movement: ", movement, "my position: ", self.x, self.y)
+            #print("movement: ", movement, "my position: ", self.x, self.y)
         self.path.append((self.x, self.y))
         sleep(0.2)
 
@@ -244,28 +266,154 @@ class Agent:
             sleep(0.05)
 
 
-    def search_box_around(self):
-        """Teste les 8 cases autour dans l'ordre 1->8 et s'arrête dès qu'il trouve la box."""
-        # mêmes directions que dans Game.moves :
-        directions = [1, 2, 3, 4, 5, 6, 7, 8]
+    def search_box_around(self,moves,limit_x1, limit_x2, limit_y1, limit_y2):
+        """Teste les 8 cases autour"""
+        directions = [3, 2, 4, 4, 1, 1, 3, 3]
+
         for d in directions:
-            self.network.send({"header": MOVE, "direction": d})
-            # on laisse le temps à msg_cb de mettre à jour x, y, cell_val
-            sleep(0.2)
-            # si on est sur une case valeur 1.0, on vérifie que c'est une box
-            if self.cell_val == 1.0:
-                info = self.request_item_owner()
-                if (info.get("type") == BOX_TYPE):
-                    print("Box trouvée en", self.x, self.y)
-                    break
 
- 
+            dx, dy = moves.get(d, (0,0))
+
+            x = self.x + dx
+            y = self.y + dy
+
+            if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
+
+                self.network.send({"header": MOVE, "direction": d})
+                sleep(0.2)
+            
+            else :
+                print("LIMIT")
+                self.network.send({"header": MOVE, "direction": 0})
 
 
+            if self.cell_val == BOX_NEIGHBOUR_PERCENTAGE:
+                #print("cell_value", self.cell_val)
+                directions = [3, 2, 4, 4, 1, 1, 3, 3]
+
+                for i in directions:
+                    dx, dy = moves.get(i, (0,0))
+
+                    x = self.x + dx
+                    y = self.y + dy
+                    if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
+                        print("LIMIT")
+                        self.network.send({"header": MOVE, "direction": i})
+                        print(f"i : {i} cell value : {self.cell_val}")
+                        sleep(0.2)
+                
+                    else :
+                        self.network.send({"header": MOVE, "direction": 0})
+
+            
+                    if self.cell_val == 1.0:
+                        info = self.request_item_owner()
+                        owner = info.get("owner")
+                        item_type = info.get("type")
+                        
+                        if item_type == BOX_TYPE:
+                            if owner is not None and owner != self.agent_id:
+                                # Item étranger - ajouter aux foreign items
+                                self.foreign_items.add((self.x, self.y, owner, BOX_TYPE))
+                                self.positions.add((self.x, self.y))
+                                print(f"not my box on ({self.x}, {self.y}), owner: {owner}")
+                                
+                                for dx in [-1, 0, 1]:
+                                    for dy in [-1, 0, 1]:
+                                        neighbor = (self.x + dx, self.y + dy)
+                                        if neighbor not in self.path:
+                                            self.path.append(neighbor)
+                                
+                            else:
+                                self.my_box_found = True
+                                self.BOXES_coordonates.append(((self.x, self.y), owner))
+                                self.positions.add((self.x, self.y))
+                                print(f"MY BOX ON ({self.x}, {self.y})!")
+                                for dx in [-1, 0, 1]:
+                                    for dy in [-1, 0, 1]:
+                                        neighbor = (self.x + dx, self.y + dy)
+                                        if neighbor not in self.path:
+                                            self.path.append(neighbor)
+                            break
+
+
+    def search_key_around(self,moves,limit_x1, limit_x2, limit_y1, limit_y2):
+        """Teste les 8 cases autour"""
+        print("KEY PATTERN")
+        directions = [3, 2, 4, 4, 1, 1, 3, 3]
         
-        
-                 
+        for d in directions:
+            dx, dy = moves.get(d, (0,0))
 
+            x = self.x + dx
+            y = self.y + dy
+            if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
+                print("LIMIT")
+                self.network.send({"header": MOVE, "direction": d})
+                sleep(0.2)
+            
+            else :
+                self.network.send({"header": MOVE, "direction": 0})
+
+            if self.cell_val == KEY_NEIGHBOUR_PERCENTAGE:
+                print("je suis dans le if apres le d")
+                directions = [3, 2, 4, 4, 1, 1, 3, 3]
+                for i in directions:
+                    dx, dy = moves.get(i, (0,0))
+
+                    x = self.x + dx
+                    y = self.y + dy
+
+                    if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
+                        print("LIMIT")
+                        self.network.send({"header": MOVE, "direction": i})
+                        print(f"i : {i} cell value : {self.cell_val}")
+                        sleep(0.2)
+                
+                    else :
+                        self.network.send({"header": MOVE, "direction": 0})
+            
+                    if  self.cell_val == 1.0:
+                        info = self.request_item_owner()
+                        owner = info.get("owner")
+                        item_type = info.get("type")
+                        
+                        if item_type == KEY_TYPE:
+                            if owner is not None and owner != self.agent_id:    # NOT THE ID KEY
+                                self.foreign_items.add((self.x, self.y, owner, KEY_TYPE))  #say position, id and type of the key
+                                self.positions.add((self.x, self.y))  #save position of the key (used after to not turn around the key because of the pattern)
+                                print(f"not my key on ({self.x}, {self.y}), owner: {owner}")
+                                
+                                for dx in [-1, 0, 1]:
+                                    for dy in [-1, 0, 1]:
+                                        neighbor = (self.x + dx, self.y + dy)
+                                        if neighbor not in self.path:
+                                            self.path.append(neighbor)
+                                
+                            else:
+                                self.my_key_found = True
+                                self.KEYS_coordonates.append(((self.x, self.y), owner))
+                                self.positions.add((self.x, self.y))
+                                print(f"MY KEY FOUND ON ({self.x}, {self.y})!")
+
+                                for dx in [-1, 0, 1]:
+                                    for dy in [-1, 0, 1]:
+                                        neighbor = (self.x + dx, self.y + dy)
+                                        if neighbor not in self.path:
+                                            self.path.append(neighbor)
+
+                            break
+
+
+    def avoid_pattern(self): 
+        for dx in [-2, -1,0, 1,2]:
+            for dy in [-2,-1,  0, 1, 2]:
+                if dx == 0 and dy == 0:
+                    continue
+                neighbor_pos = (self.x + dx, self.y + dy)
+                if neighbor_pos in self.positions:
+                    return True
+        return False
             
  
 if __name__ == "__main__":
