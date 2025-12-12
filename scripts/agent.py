@@ -17,6 +17,17 @@ class Agent:
     def __init__(self, server_ip):
         #TODO: DEINE YOUR ATTRIBUTES HERE
 
+        self.move_to_str = {
+            (-1, 0): LEFT,  # LEFT
+            (1, 0): RIGHT,   # RIGHT
+            (0, -1): UP,  # UP
+            (0, 1): DOWN,   # DOWN
+            (-1, -1): UP_LEFT, # UP-LEFT
+            (1, -1): UP_RIGHT,  # UP-RIGHT
+            (-1, 1): DOWN_LEFT,  # DOWN-LEFT
+            (1, 1): DOWN_RIGHT,   # DOWN-RIGHT
+        }
+
         #DO NOT TOUCH THE FOLLOWING INSTRUCTIONS
         self.network = Network(server_ip=server_ip)
         self.agent_id = self.network.id
@@ -29,6 +40,10 @@ class Agent:
         self.x, self.y = env_conf["x"], env_conf["y"]   #initial agent position
         self.w, self.h = env_conf["w"], env_conf["h"]   #environment dimensions
         cell_val = env_conf["cell_val"] #value of the cell the agent is located in
+        self.cell_val = cell_val
+        #ADD : 
+        self.path = [(self.x, self.y)]
+        print(cell_val)
         self.cell_val = float(cell_val)
         #ADD : 
         self.path = [(self.x, self.y)]
@@ -415,6 +430,268 @@ class Agent:
                     return True
         return False
             
+#added : 
+    #algo d'évitement d'obstacle
+    def go_to_goal(self, goal):
+        while self.x != goal[0] and self.y != goal[1] and self.running:
+            dx = goal[0] - self.x
+            dy = goal[1] - self.y
+            d = np.sqrt((goal[0] - self.x)**2 + ((goal[1] - self.y)**2))
+            denom = d/2
+            move = (int(dx/denom), int(dy/denom))
+            #if there is a wall
+            if self.cell_val == 0.35:
+                go_back = (previous_move[0]*(-1), previous_move[1]*(-1))
+                move = go_back
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                #go back 2 times
+                self.network.send(cmds)
+                sleep(0.5)
+                self.network.send(cmds)
+                sleep(0.5)
+
+
+                #compute avoiding direction in function of the previous move
+                avoid_direction_x = (dx/abs(dx))
+                avoid_direction_y = (dy/abs(dy))
+
+                if previous_move[0] == 0:
+                    avoid_direction = (avoid_direction_x,0)
+                elif previous_move[1] == 0:
+                    avoid_direction = (0,avoid_direction_y)
+                else:
+                    if dy > dx:
+                        avoid_direction = (0,avoid_direction_y)
+                    else:
+                        avoid_direction = (avoid_direction_x, 0)
+                
+
+                move = avoid_direction
+                direction = self.move_to_str[move]
+                
+                for i in range(2):
+                    cmds = {"header": MOVE, "direction": direction}
+                    #do avoiding direction
+                    self.network.send(cmds)
+
+                    sleep(0.5)
+
+                    #if avoiding direction is obstacle, change the avoiding direction
+                    if self.cell_val == 0.35:
+                        break
+                        # move = (avoid_direction[0]*(-1), avoid_direction[1]*(-1))
+                        # direction = self.move_to_str[move]
+                    
+
+
+            else:
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                self.network.send(cmds)
+
+            previous_move = move
+            #print(self.msg)
+
+            sleep(1)
+
+
+
+    #Partie de martin
+    def agent_management(self):
+        """
+        Stop Agent's observation when all items are detected and registered, and start a_start to reach keys and boxes
+        """
+        sleep(1)
+        self.total_objects = self.nb_agent_expected * 2
+        print(len(self.detected_items), " items detected so far.")
+        print(self.total_objects, " items to be detected in total.")
+           
+        # continue exploration until all items have been found
+        while len(self.detected_items) < self.total_objects:
+
+            # agent continue to move
+            self.move_agent()
+            
+            # Request item owner info
+            self.network.send({"header": GET_ITEM_OWNER})
+
+            # Get item owner response
+            item_response = self.wait_for_response(GET_ITEM_OWNER)
+            owner = item_response.get("owner")
+            item_type = item_response.get("type")
+
+            # If agent is on an item 
+            if owner is not None and item_type is not None:
+                print("I'm here - 3")
+                # Get current item coordinates
+                item_coords = (self.x, self.y)
+                
+                # Check if item already registered
+                already_registered = any(item[0] == item_coords[0] and item[1] == item_coords[1] for item in self.detected_items)
+                
+                if not already_registered:
+                    # rgister the item
+                    self.detected_items.append((item_coords[0], item_coords[1], owner, item_type))
+                    
+                    # Store in list for each type of item
+                    if item_type == KEY_TYPE:
+                        self.KEYS_coordonates.append((item_coords, owner))
+                        print(f"KEY discovered at {item_coords}, owner: {owner}")
+
+                    elif item_type == BOX_TYPE:
+                        self.BOXES_coordonates.append((item_coords, owner))
+                        print(f"BOX discovered at {item_coords}, owner: {owner}")
+            else:
+                continue  # No item found, continue exploration
+        
+        # All items have been found => exploration is completed
+        print("All items have been found => exploration phase complete")
+        print(f"Keys found: {self.KEYS_coordonates}")
+        print(f"Boxes found: {self.BOXES_coordonates}")
+        
+        # NOW Implement A* algorithm to:
+        # 1. Go to key
+        self.go_to_goal(self.KEYS_coordonates)
+        # 2. Go to box
+        self.go_to_goal(self.BOXES_coordonates)
+
+    def map_division(self): #Fonctionnel
+        """ Method used to divide the map among agents """
+        x = self.w
+        y = self.h
+        if self.nb_agent_expected == 2: 
+            y = self.h 
+            x = self.w //2
+        elif self.nb_agent_expected == 3:
+            y = self.h 
+            x = self.w //3
+        elif self.nb_agent_expected == 4:
+            y = self.h // 2
+            x = self.w // 2
+        return x, y  
+    
+    def choose_map_division(self): #Fonctionnel
+        x,y = self.map_division()
+        limit_x = (0, self.w)
+        limit_y = (0, self.h)
+        if self.nb_agent_expected == 2:
+            if self.agent_id == 0:
+                limit_x = (0, x)
+                limit_y = (0, y)
+            else:
+                limit_x = (x, x*2)
+                limit_y = (0, y)
+        elif self.nb_agent_expected == 3:
+            if self.agent_id == 0:
+                limit_x = (0, x)
+                limit_y = (0, y)
+            elif self.agent_id == 1:
+                limit_x = (x, x*2)
+                limit_y = (0, y)
+            else:
+                limit_x = (x*2, x*3)
+                limit_y = (0, y)
+        elif self.nb_agent_expected == 4:
+            if self.agent_id == 0:
+                limit_x = (0, x)
+                limit_y = (0, y)
+            elif self.agent_id == 1:
+                limit_x = (x, x*2)
+                limit_y = (0, y)
+            elif self.agent_id == 2:
+                limit_x = (0, x)
+                limit_y = (y, y*2)
+            else:
+                limit_x = (x, x*2)
+                limit_y = (y, y*2)
+        return limit_x, limit_y
+
+
+    def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
+        """ Method used to move the agent in the environment """
+        x = self.x
+        y = self.y
+        movement = randint(1,8)
+        moves = {
+            1: (-1, 0),  # LEFT
+            2: (1, 0),   # RIGHT
+            3: (0, -1),  # UP
+            4: (0, 1),   # DOWN
+            5: (-1, -1), # UP-LEFT
+            6: (1, -1),  # UP-RIGHT
+            7: (-1, 1),  # DOWN-LEFT
+            8: (1, 1),   # DOWN-RIGHT
+        }
+        dx, dy = moves.get(movement, (0,0))
+        x = self.x + dx
+        y = self.y + dy
+        
+        #test des voisins pr check qu'il y a des dispo
+        neighbors = []
+        for ddx, ddy in moves.values():
+            nx, ny = self.x + ddx, self.y + ddy
+            if limit_x1 <= nx < limit_x2 and limit_y1 <= ny < limit_y2:
+                neighbors.append((nx, ny))
+
+        #si il est entourer de voisins dans le path
+        blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
+        if x < limit_x1 or x >= limit_x2 or y < limit_y1 or y >= limit_y2 and (x, y) != ((limit_x1,limit_y1) or (limit_x2-1, limit_y2-1) or (limit_x1, limit_y2-1) or (limit_x2-1, limit_y1)):
+            print("je suis dans les limites avec ", x, y)
+            movement = 0   #STAND
+            print("movement: ", movement, "my position: ", self.x, self.y)
+        elif (x, y) in self.path and not blocked :
+            movement = 0   #STAND
+            print("je suis dans le path ", x, y)
+            print("movement: ", movement, "my position: ", self.x, self.y)
+
+        elif self.cell_val == BOX_NEIGHBOUR_PERCENTAGE:
+            print("je suis proche d'une box")
+            # pattern de recherche de la box dans le voisinage 1 (8 directions)
+            self.search_box_around()
+            # on sort ici pour ne pas envoyer un move aléatoire en plus
+            self.path.append((self.x, self.y))
+            sleep(0.2)
+            return
+
+
+        elif self.cell_val == KEY_NEIGHBOUR_PERCENTAGE:
+            print("je suis proche d'une key")
+            self.box_key_pattern()
+
+        else:
+            self.network.send({"header": MOVE, "direction": movement})
+            print("movement: ", movement, "my position: ", self.x, self.y)
+        self.path.append((self.x, self.y))
+        sleep(0.2)
+
+
+    def request_item_owner(self):
+        """Demande synchrone au jeu quel est l'item sous le robot."""
+        self.network.send({"header": GET_ITEM_OWNER})
+        # on attend la réponse correspondante de façon simple
+        while True:
+            msg = self.msg
+            if msg.get("header") == GET_ITEM_OWNER:
+                return msg
+            sleep(0.05)
+
+
+    def search_box_around(self):
+        """Teste les 8 cases autour dans l'ordre 1->8 et s'arrête dès qu'il trouve la box."""
+        # mêmes directions que dans Game.moves :
+        directions = [1, 2, 3, 4, 5, 6, 7, 8]
+        for d in directions:
+            self.network.send({"header": MOVE, "direction": d})
+            # on laisse le temps à msg_cb de mettre à jour x, y, cell_val
+            sleep(0.2)
+            # si on est sur une case valeur 1.0, on vérifie que c'est une box
+            if self.cell_val == 1.0:
+                info = self.request_item_owner()
+                if (info.get("type") == BOX_TYPE):
+                    print("Box trouvée en", self.x, self.y)
+                    break
+
  
 if __name__ == "__main__":
     from random import randint
@@ -447,5 +724,9 @@ if __name__ == "__main__":
             pass
     except KeyboardInterrupt:
         pass
+
+# it is always the same location of the agent first location
+
+
 
 # it is always the same location of the agent first location
