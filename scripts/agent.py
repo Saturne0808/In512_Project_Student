@@ -201,6 +201,21 @@ class Agent:
                 limit_y = (y, y*2)
         return limit_x, limit_y
 
+    def moove_diagonal(self, limit_x1, limit_x2, limit_y1, limit_y2):
+        x = self.x
+        y = self.y
+        moves = {
+            1: (-1, 0),  # LEFT
+            2: (1, 0),   # RIGHT
+            3: (0, -1),  # UP
+            4: (0, 1),   # DOWN
+            5: (-1, -1), # UP-LEFT
+            6: (1, -1),  # UP-RIGHT
+            7: (-1, 1),  # DOWN-LEFT
+            8: (1, 1),   # DOWN-RIGHT
+        }
+        #Cas ou on atteint les bords
+        
 
     def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
         """ Method used to move the agent in the environment """
@@ -506,12 +521,15 @@ if __name__ == "__main__":
 
     agent = Agent(args.server_ip)
     try : 
-        sleep(5)  #wait for all agents to be connected
+        sleep(5)  
         limit_x, limit_y = agent.choose_map_division()
         limit_x1 = limit_x[0]
         limit_x2 = limit_x[1]
         limit_y1 = limit_y[0]
         limit_y2 = limit_y[1]
+        print("Je part vers mon départ")
+        agent.go_to_goal((limit_x2, limit_y1)) # Ce met en haut à gauche au départ de sa zone. 
+        print("Je suis arrivé à mon départ")
         while True: 
             agent.move_agent(limit_x1, limit_x2, limit_y1, limit_y2)
         try:    #Manual control test0
@@ -526,5 +544,7 @@ if __name__ == "__main__":
                 agent.network.send(cmds)
         except KeyboardInterrupt:
             pass
+    except KeyboardInterrupt:
+        pass
 
 # it is always the same location of the agent first location
