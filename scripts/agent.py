@@ -224,11 +224,16 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-            
+       
         elif self.cell_val == 0.25 or self.cell_val == 0.3:
             # if case already discovered
             if self.avoid_pattern():
                 print(f"PATTERN IGNORED")
+                """
+                ICI LE PROBLEME FAIRE EN SORTE QUE LE ROBOT CE CASSE 
+                SINN BOUCLE INFINIE
+                """
+                pass
                 
                 # if closed to box
             elif self.cell_val == 0.3:
@@ -236,7 +241,7 @@ class Agent:
                 self.search_box_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
                 self.path.append((self.x, self.y))
                 sleep(0.2)
-                return
+                
 
                 #if closed to key
             elif self.cell_val == 0.25:
@@ -244,7 +249,7 @@ class Agent:
                 self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
                 self.path.append((self.x, self.y))
                 sleep(0.2)
-                return
+                
             
         elif x -1 < limit_x1 and (x,y-1) not in self.path:
             i = 0
@@ -304,6 +309,8 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
+        
+        
 
        
         else : 
