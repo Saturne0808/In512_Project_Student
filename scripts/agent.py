@@ -201,9 +201,12 @@ class Agent:
                 limit_y = (y, y*2)
         return limit_x, limit_y
 
-    def moove_diagonal(self, limit_x1, limit_x2, limit_y1, limit_y2):
+    def move_diagonal(self, limit_x1, limit_x2, limit_y1, limit_y2):
         x = self.x
         y = self.y
+        print("my position" , self.x, self.y)
+        print("last posi" , self.path[-1])
+        print("next posi" , x,y-1)
         moves = {
             1: (-1, 0),  # LEFT
             2: (1, 0),   # RIGHT
@@ -214,7 +217,103 @@ class Agent:
             7: (-1, 1),  # DOWN-LEFT
             8: (1, 1),   # DOWN-RIGHT
         }
-        #Cas ou on atteint les bords
+        #Check si on est sur l'angle en haut à gauche
+        if x + 1 > limit_x2 and y - 1 > limit_y1 :
+
+            movement = 7  #DOWN-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+            
+        elif self.cell_val == 0.25 or self.cell_val == 0.3:
+            # if case already discovered
+            if self.avoid_pattern():
+                print(f"PATTERN IGNORED")
+                
+                # if closed to box
+            elif self.cell_val == 0.3:
+                #print("je suis proche d'une box")
+                self.search_box_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
+                self.path.append((self.x, self.y))
+                sleep(0.2)
+                return
+
+                #if closed to key
+            elif self.cell_val == 0.25:
+                #print("je suis proche d'une key")
+                self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
+                self.path.append((self.x, self.y))
+                sleep(0.2)
+                return
+            
+        elif x -1 < limit_x1 and (x,y-1) not in self.path:
+            i = 0
+            for i in range(0,4):
+                print("i :" , i)
+                movement = 3  #UP
+                self.network.send({"header": MOVE, "direction": movement})
+                sleep(0.5)
+                i += 1
+                self.path.append((self.x, self.y))
+            movement = 6 #UP-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+        elif y -1 < limit_y1 and x+1 <= limit_x2 and (x-1,y) not in self.path:
+            i = 0
+            for i in range(0,4):
+                print("i :" , i)
+                movement = 1  #LEFT
+                self.network.send({"header": MOVE, "direction": movement})
+                sleep(0.5)
+                i += 1
+                self.path.append((self.x, self.y))
+            movement = 7  #DOWN-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+        elif y+1 >= limit_y2 and (x-1,y) not in self.path:
+            i = 0
+            for i in range(0,4):
+                print("i :" , i)
+                movement = 1  #LEFT
+                self.network.send({"header": MOVE, "direction": movement})
+                sleep(0.5)
+                i += 1
+                self.path.append((self.x, self.y))
+            movement = 6  #UP-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+        elif x >= limit_x2-1 :
+            i = 0
+            for i in range(0,4):
+                print("i :" , i)
+                movement = 3  #UP
+                self.network.send({"header": MOVE, "direction": movement})
+                sleep(0.5)
+                i += 1
+                self.path.append((self.x, self.y))
+            movement = 7  #DOWN-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+            
+        elif y -1 > limit_y1 - 1 and (x-1,y+1) in self.path:
+            movement = 6 #UP-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+
+       
+        else : 
+            movement = 7  #DOWN-LEFT
+            self.network.send({"header": MOVE, "direction": movement})
+            sleep(0.5)
+            self.path.append((self.x, self.y))
+            
+            
+            
         
 
     def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
@@ -462,9 +561,9 @@ class Agent:
                 cmds = {"header": MOVE, "direction": direction}
                 #go back 2 times
                 self.network.send(cmds)
-                sleep(0.5)
+                sleep(0.2)
                 self.network.send(cmds)
-                sleep(0.5)
+                sleep(0.2)
 
 
                 #compute avoiding direction in function of the previous move
@@ -490,7 +589,7 @@ class Agent:
                     #do avoiding direction
                     self.network.send(cmds)
 
-                    sleep(0.5)
+                    sleep(0.2)
 
                     #if avoiding direction is obstacle, change the avoiding direction
                     if self.cell_val == 0.35:
@@ -508,7 +607,7 @@ class Agent:
             previous_move = move
             #print(self.msg)
 
-            sleep(1)
+            sleep(0.2)
 
 
  
@@ -527,11 +626,12 @@ if __name__ == "__main__":
         limit_x2 = limit_x[1]
         limit_y1 = limit_y[0]
         limit_y2 = limit_y[1]
+        print("limit x2", limit_x2)
         print("Je part vers mon départ")
-        agent.go_to_goal((limit_x2, limit_y1)) # Ce met en haut à gauche au départ de sa zone. 
+        agent.go_to_goal((limit_x2-2, limit_y2-4)) # Ce met en bas à gauche  
         print("Je suis arrivé à mon départ")
         while True: 
-            agent.move_agent(limit_x1, limit_x2, limit_y1, limit_y2)
+            agent.move_diagonal(limit_x1, limit_x2, limit_y1, limit_y2)
         try:    #Manual control test0
             while True:
                 cmds = {"header": int(input("0 <-> Broadcast msg\n1 <-> Get data\n2 <-> Move\n3 <-> Get nb connected agents\n4 <-> Get nb agents\n5 <-> Get item owner\n"))}
