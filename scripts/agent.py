@@ -99,8 +99,7 @@ class Agent:
 
     #TODO: CREATE YOUR METHODS HERE...
 
-    #added : 
-    #Partie de martin
+    #added :
     def wait_for_response(self, header, timeout_iterations=10):
         """Wait for a specific response from msg_cb == avoid busy waiting"""
         for i in range(timeout_iterations):
@@ -109,18 +108,15 @@ class Agent:
             sleep(0.05)
         return {}
     
-    def request_detected_items(self):
-        """Demande synchrone au jeu quel est l'item sous le robot."""
+    def request_detected_items(self): # Get the detected items from the server
         self.network.send({"header": GET_DETECTED_ITEMS})
-        # on attend la réponse correspondante de façon simple
         while True:
             msg = self.msg
-            print(msg)
             if msg.get("header") == GET_DETECTED_ITEMS:
                 return msg
             sleep(0.05)
 
-    def agent_management(self):
+    def agent_management(self): 
         """
         Stop Agent's observation when all items are detected and registered, and start a_start to reach keys and boxes
         """
@@ -164,7 +160,7 @@ class Agent:
                 )
                 if not already_known:
                     print("j'ai trouver") #ne pas toucher
-                    # rgister the item
+                    # register the item
                     self.network.send({
                         "header": REGISTER_ITEM,
                         "type": item_type,
@@ -176,8 +172,9 @@ class Agent:
                     
             else:
                 continue  # No item found, continue exploration
-        response = self.request_detected_items()
+        response = self.request_detected_items() #Last update of detected items
         self.detected_items = response.get("detected_items", [])
+        #Search our key and box coordinates
         for item in self.detected_items:
             if item["agent"] == self.agent_id:
                 if item["type"] == KEY_TYPE:
@@ -187,15 +184,15 @@ class Agent:
         print("My key coords:", self.my_key_coords)
         print("My box coords:", self.my_box_coords)
         if self.my_key_found != True :
-            self.go_to_goal(self.my_key_coords)
+            self.go_to_goal(self.my_key_coords) # go to the key
         print("key reached")
 
-        self.go_to_goal(self.my_box_coords)
+        self.go_to_goal(self.my_box_coords) # go to the box
         print("box reached")
 
         return(0)
     
-    def map_division(self): #Fonctionnel
+    def map_division(self): 
         """ Method used to divide the map among agents """
         x = self.w
         y = self.h
@@ -210,7 +207,13 @@ class Agent:
             x = self.w // 2
         return x, y  
     
-    def choose_map_division(self): #Fonctionnel
+    def choose_map_division(self) : 
+        """
+        Attribute to each agent its part of the map
+        2 agents : left and right
+        3 agents : left, middle, right
+        4 agents : top-left, top-right, bottom-left, bottom-right
+        """
         x,y = self.map_division()
         limit_x = (0, self.w)
         limit_y = (0, self.h)
@@ -247,6 +250,7 @@ class Agent:
         return limit_x, limit_y
 
     def move_diagonal(self, limit_x1, limit_x2, limit_y1, limit_y2):
+        """ Method used to move the agent diagonally in its part of the map """
         x = self.x
         y = self.y
         moves = {
@@ -261,15 +265,15 @@ class Agent:
         }
         
 
-
+        # IF BLOCKED IN THE CORNER
         if x + 1 > limit_x2 and y - 1 > limit_y1 :
-
             movement = 7  #DOWN-LEFT
             self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-       
+
+        # IF NEAR A BOX OR A KEY
         elif self.cell_val == 0.25 or self.cell_val == 0.3:
             # if case already discovered
             if self.avoid_pattern():
@@ -294,6 +298,7 @@ class Agent:
                 self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
                 self.path.append((self.x, self.y))
                 sleep(0.2)
+        # IF OBSTACLE DETECTED
         elif self.cell_val == 0.35:
             print("Obstacle detected, avoiding...")
             if self.last_move == 7:
@@ -328,15 +333,15 @@ class Agent:
                     self.network.send({"header": MOVE, "direction":  6}) 
                     self.path.append((self.x, self.y))
                     sleep(0.5)
-
+        #For return to the trajectory
         elif self.count_avoid_right >= 5 :
-            print("je retourne sur ma traj")
             for i in range(0,3) : 
                 movement = 1 #LEFT
                 self.network.send({"header": MOVE, "direction":  movement}) 
                 self.path.append((self.x, self.y))
                 sleep(0.5)
             self.count_avoid_right = -1
+        #For return to the trajectory
         elif self.count_avoid_left >= 5 :
             for i in range(0,3) : 
                 movement = 2 #LEFT
@@ -348,6 +353,7 @@ class Agent:
             self.path.append((self.x, self.y))
             sleep(0.5)
         
+        #If limits reached
         elif x -1 < limit_x1 and (x,y-1) not in self.path:
             i = 0
             for i in range(0,4):
@@ -362,6 +368,7 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
+        #If limits reached
         elif y -1 < limit_y1 and x+1 <= limit_x2 and (x-1,y) not in self.path:
             i = 0
             for i in range(0,4):
@@ -376,6 +383,7 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
+        #If limits reached
         elif y+1 >= limit_y2 and (x-1,y) not in self.path:
             i = 0
             for i in range(0,4):
@@ -390,6 +398,7 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
+        #If limits reached    
         elif x >= limit_x2-1 :
             i = 0
             for i in range(0,4):
@@ -404,24 +413,25 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-            
+        #movement in diagonal for up-left direction       
         elif y -1 > limit_y1 - 1 and (x-1,y+1) in self.path:
             movement = 6 #UP-LEFT
             self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-            if self.count_avoid_left >= 0 : 
+            if self.count_avoid_left >= 0 : # If need go back to the trajectory
                 self.count_avoid_left += 1
+        #movement in diagonal for down-left direction
         else : 
             movement = 7  #DOWN-LEFT
             self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-            if self.count_avoid_right >= 0 : 
+            if self.count_avoid_right >= 0 : # If need go back to the trajectory
                 self.count_avoid_right += 1
-                print("count_avoid_right", self.count_avoid_right)
+                
 
  
     def request_item_owner(self):
@@ -652,16 +662,6 @@ if __name__ == "__main__":
 
     agent = Agent(args.server_ip)
     try : 
-        """sleep(5)  
-        limit_x, limit_y = agent.choose_map_division()
-        limit_x1 = limit_x[0]
-        limit_x2 = limit_x[1]
-        limit_y1 = limit_y[0]
-        limit_y2 = limit_y[1]
-        print("limit x2", limit_x2)
-        print("Je part vers mon départ")
-        agent.go_to_goal((limit_x2-2, limit_y2-4)) # Ce met en bas à gauche  
-        print("Je suis arrivé à mon départ")"""
         while True: 
             agent.agent_management()
         try:    #Manual control test0
@@ -678,5 +678,3 @@ if __name__ == "__main__":
             pass
     except KeyboardInterrupt:
         pass
-
-# it is always the same location of the agent first location
