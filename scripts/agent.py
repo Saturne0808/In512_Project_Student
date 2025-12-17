@@ -122,12 +122,12 @@ class Agent:
         Stop Agent's observation when all items are detected and registered, and start a_start to reach keys and boxes
         """
         sleep(5)  
-        limit_x, limit_y = self.choose_map_division()
+        limit_x, limit_y = agent.choose_map_division()
         limit_x1 = limit_x[0]
         limit_x2 = limit_x[1]
         limit_y1 = limit_y[0]
         limit_y2 = limit_y[1]
-        self.go_to_goal((limit_x2-2, limit_y2-3)) # Ce met en bas à gauche  
+        agent.go_to_goal((limit_x2-2, limit_y2-3)) # Ce met en bas à gauche  
         self.total_objects = self.nb_agent_expected * 2
         #print(len(self.detected_items), " items detected so far.")
         #print(self.total_objects, " items to be detected in total.")
@@ -163,6 +163,7 @@ class Agent:
                     for item in self.detected_items
                 )
                 if not already_known:
+                    print("j'ai trouvé")
                     # rgister the item
                     self.network.send({
                         "header": REGISTER_ITEM,
