@@ -46,7 +46,8 @@ class Agent:
         self.cell_val = float(cell_val) 
         self.path = [(self.x, self.y)]
         self.last_move = 0
-
+        self.count_avoid_right = -1
+        self.count_avoid_left = -1
         # basic memories for discovered items
         self.detected_items = []
         self.my_key_coords = None
@@ -258,7 +259,9 @@ class Agent:
             7: (-1, 1),  # DOWN-LEFT
             8: (1, 1),   # DOWN-RIGHT
         }
-        #Check si on est sur l'angle en haut à gauche
+        
+
+
         if x + 1 > limit_x2 and y - 1 > limit_y1 :
 
             movement = 7  #DOWN-LEFT
@@ -291,8 +294,60 @@ class Agent:
                 self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
                 self.path.append((self.x, self.y))
                 sleep(0.2)
-                
-            
+        elif self.cell_val == 0.35:
+            print("Obstacle detected, avoiding...")
+            if self.last_move == 7:
+                self.count_avoid_right = 0
+                self.network.send({"header": MOVE, "direction":6}) #opposer de la direction
+                sleep(0.5)
+                for i in range(0,3):
+                    movement = 2  #RIGHT
+                    self.network.send({"header": MOVE, "direction":  movement}) 
+                    self.path.append((self.x, self.y))
+                    sleep(0.5)
+            elif self.last_move == 6:
+                self.count_avoid_left = 0
+                self.network.send({"header": MOVE, "direction":7}) #opposer de la direction
+                sleep(0.5)
+                for i in range(0,3):
+                    movement = 1  #LEFT
+                    self.network.send({"header": MOVE, "direction":  movement}) 
+                    self.path.append((self.x, self.y))
+                    sleep(0.5)
+                self.network.send({"header": MOVE, "direction":  6}) 
+                self.path.append((self.x, self.y))
+                sleep(0.5)
+                if self.cell_val == 0.35: # on recommence au cas ou 
+                    self.network.send({"header": MOVE, "direction":7}) #opposer de la direction
+                    sleep(0.5)
+                    for i in range(0,3):
+                        movement = 1  #LEFT
+                        self.network.send({"header": MOVE, "direction":  movement}) 
+                        self.path.append((self.x, self.y))
+                        sleep(0.5)
+                    self.network.send({"header": MOVE, "direction":  6}) 
+                    self.path.append((self.x, self.y))
+                    sleep(0.5)
+
+        elif self.count_avoid_right >= 5 :
+            print("je retourne sur ma traj")
+            for i in range(0,3) : 
+                movement = 1 #LEFT
+                self.network.send({"header": MOVE, "direction":  movement}) 
+                self.path.append((self.x, self.y))
+                sleep(0.5)
+            self.count_avoid_right = -1
+        elif self.count_avoid_left >= 5 :
+            for i in range(0,3) : 
+                movement = 2 #LEFT
+                self.network.send({"header": MOVE, "direction":  movement}) 
+                self.path.append((self.x, self.y))
+                sleep(0.5)
+            self.count_avoid_left = -1
+            self.network.send({"header": MOVE, "direction":  6}) 
+            self.path.append((self.x, self.y))
+            sleep(0.5)
+        
         elif x -1 < limit_x1 and (x,y-1) not in self.path:
             i = 0
             for i in range(0,4):
@@ -356,80 +411,19 @@ class Agent:
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
+            if self.count_avoid_left >= 0 : 
+                self.count_avoid_left += 1
         else : 
             movement = 7  #DOWN-LEFT
             self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
+            if self.count_avoid_right >= 0 : 
+                self.count_avoid_right += 1
+                print("count_avoid_right", self.count_avoid_right)
 
-    def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
-        """ Method used to move the agent in the environment """
-        x = self.x
-        y = self.y
-        movement = randint(1,8)
-        moves = {
-            1: (-1, 0),  # LEFT
-            2: (1, 0),   # RIGHT
-            3: (0, -1),  # UP
-            4: (0, 1),   # DOWN
-            5: (-1, -1), # UP-LEFT
-            6: (1, -1),  # UP-RIGHT
-            7: (-1, 1),  # DOWN-LEFT
-            8: (1, 1),   # DOWN-RIGHT
-        }
-        dx, dy = moves.get(movement, (0,0))
-        x = self.x + dx
-        y = self.y + dy
-        
-        #test des voisins pr check qu'il y a des dispo
-        neighbors = []
-        for ddx, ddy in moves.values():
-            nx, ny = self.x + ddx, self.y + ddy
-            if limit_x1 <= nx < limit_x2 and limit_y1 <= ny < limit_y2:
-                neighbors.append((nx, ny))
-
-        #si il est entourer de voisins dans le path
-        blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
-
-        if self.cell_val == 0.25 or self.cell_val == 0.3:
-            # if case already discovered
-            if self.avoid_pattern():
-                print(f"PATTERN IGNORED")
-                
-                # if closed to box
-            elif self.cell_val == 0.3:
-                #print("je suis proche d'une box")
-                self.search_box_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
-                self.path.append((self.x, self.y))
-                sleep(0.2)
-                return
-
-                #if closed to key
-            elif self.cell_val == 0.25:
-                #print("je suis proche d'une key")
-                self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
-                self.path.append((self.x, self.y))
-                sleep(0.2)
-                return
-
-        if x < limit_x1 or x >= limit_x2 or y < limit_y1 or y >= limit_y2 and (x, y) != ((limit_x1,limit_y1) or (limit_x2-1, limit_y2-1) or (limit_x1, limit_y2-1) or (limit_x2-1, limit_y1)):
-            #print("je suis dans les limites avec ", x, y)
-            movement = 0   #STAND
-            #print("movement: ", movement, "my position: ", self.x, self.y)
-        elif (x, y) in self.path and not blocked :
-            movement = 0   #STAND
-            #print("je suis dans le path ", x, y)
-            #print("movement: ", movement, "my position: ", self.x, self.y)
-
-
-        else:
-            self.network.send({"header": MOVE, "direction": movement})
-            #print("movement: ", movement, "my position: ", self.x, self.y)
-        self.path.append((self.x, self.y))
-        sleep(0.2)
-
-
+ 
     def request_item_owner(self):
         """Demande synchrone au jeu quel est l'item sous le robot."""
         self.network.send({"header": GET_ITEM_OWNER})
