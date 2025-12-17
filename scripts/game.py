@@ -23,6 +23,8 @@ class Game:
         self.agent_paths = [None]*nb_agents
         self.load_map(map_id)
         self.gui = GUI(self)
+        #ADDED : 
+        self.detected_items = []
         
 
     
@@ -73,7 +75,13 @@ class Game:
             return {"sender": GAME_ID, "header": GET_NB_AGENTS, "nb_agents": self.nb_agents}
         elif msg["header"] == GET_ITEM_OWNER:
             return self.handle_item_owner_request(agent_id)
-        
+        #ADDED : 
+        elif msg["header"] == REGISTER_ITEM:
+            return self.handle_register_item(msg)
+        elif msg["header"] == GET_DETECTED_ITEMS:
+            print("Sending detected items to agent", agent_id)
+            return {"sender": GAME_ID,"header": GET_DETECTED_ITEMS,"detected_items": self.detected_items}
+                
 
     def handle_move(self, msg, agent_id):
         """ Make sure the desired move is allowed and update the agent's position """
@@ -86,7 +94,13 @@ class Game:
                     self.agent_paths[agent_id].append((self.agents[agent_id].x, self.agents[agent_id].y))
                     #sleep(0.5)
         return {"sender": GAME_ID, "header": MOVE, "x": self.agents[agent_id].x, "y": self.agents[agent_id].y, "cell_val": self.map_real[self.agents[agent_id].y, self.agents[agent_id].x]}
-
+    #ADDED :
+    def handle_register_item(self, msg):
+        """ Register detected item by the agent """
+        item = {"type": msg["type"],"agent":msg["owner"], "x": msg["x"], "y": msg["y"]}
+        if item not in self.detected_items:
+            self.detected_items.append(item)
+        return {"sender": GAME_ID, "header": REGISTER_ITEM, "status": "success"}
 
 
     def handle_item_owner_request(self, agent_id):

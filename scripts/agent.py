@@ -49,6 +49,8 @@ class Agent:
 
         # basic memories for discovered items
         self.detected_items = []
+
+        #Part detections ! 
         self.KEYS_coordonates = []
         self.BOXES_coordonates = []
         self.foreign_items = set()  
@@ -73,6 +75,9 @@ class Agent:
                 self.nb_agent_expected = msg["nb_agents"]
             elif msg["header"] == GET_NB_CONNECTED_AGENTS:
                 self.nb_agent_connected = msg["nb_connected_agents"]
+            #ADDED :
+            elif msg["header"] == GET_DETECTED_ITEMS:
+                self.detected_items = msg.get("detected_items", [])
 
             if "cell_val" in msg:
                 self.cell_val = msg["cell_val"]
@@ -93,20 +98,50 @@ class Agent:
 
     #added : 
     #Partie de martin
+    def wait_for_response(self, header, timeout_iterations=10):
+        """Wait for a specific response from msg_cb == avoid busy waiting"""
+        for i in range(timeout_iterations):
+            if isinstance(self.msg, dict) and self.msg.get("header") == header:
+                return dict(self.msg)
+            sleep(0.05)
+        return {}
+    
+    def request_detected_items(self):
+        """Demande synchrone au jeu quel est l'item sous le robot."""
+        self.network.send({"header": GET_DETECTED_ITEMS})
+        # on attend la réponse correspondante de façon simple
+        while True:
+            msg = self.msg
+            print(msg)
+            if msg.get("header") == GET_DETECTED_ITEMS:
+                return msg
+            sleep(0.05)
+
     def agent_management(self):
         """
         Stop Agent's observation when all items are detected and registered, and start a_start to reach keys and boxes
         """
-        sleep(1)
+        sleep(5)  
+        limit_x, limit_y = self.choose_map_division()
+        limit_x1 = limit_x[0]
+        limit_x2 = limit_x[1]
+        limit_y1 = limit_y[0]
+        limit_y2 = limit_y[1]
+        self.go_to_goal((limit_x2-2, limit_y2-3)) # Ce met en bas à gauche  
         self.total_objects = self.nb_agent_expected * 2
         #print(len(self.detected_items), " items detected so far.")
         #print(self.total_objects, " items to be detected in total.")
-           
+        
         # continue exploration until all items have been found
+        print("detected items:", len(self.detected_items))
         while len(self.detected_items) < self.total_objects:
 
+            response= self.request_detected_items()
+            self.detected_items = response.get("detected_items", [])
+            print("detected items:", len(self.detected_items))
+            print("total items to find:", self.total_objects)
             # agent continue to move
-            self.move_agent()
+            self.move_diagonal(limit_x1, limit_x2, limit_y1, limit_y2)
             
             # Request item owner info
             self.network.send({"header": GET_ITEM_OWNER})
@@ -118,25 +153,26 @@ class Agent:
 
             # If agent is on an item 
             if owner is not None and item_type is not None:
-                print("I'm here - 3")
+                
                 # Get current item coordinates
                 item_coords = (self.x, self.y)
                 
                 # Check if item already registered
-                already_registered = any(item[0] == item_coords[0] and item[1] == item_coords[1] for item in self.detected_items)
-                
-                if not already_registered:
+                already_known = any(
+                    item["x"] == item_coords[0] and item["y"] == item_coords[1]
+                    for item in self.detected_items
+                )
+                if not already_known:
                     # rgister the item
-                    self.detected_items.append((item_coords[0], item_coords[1], owner, item_type))
+                    self.network.send({
+                        "header": REGISTER_ITEM,
+                        "type": item_type,
+                        "owner": owner,
+                        "x": self.x,
+                        "y": self.y
+                    })
+                   
                     
-                    # Store in list for each type of item
-                    if item_type == KEY_TYPE:
-                        self.KEYS_coordonates.append((item_coords, owner))
-                        print(f"KEY discovered at {item_coords}, owner: {owner}")
-
-                    elif item_type == BOX_TYPE:
-                        self.BOXES_coordonates.append((item_coords, owner))
-                        print(f"BOX discovered at {item_coords}, owner: {owner}")
             else:
                 continue  # No item found, continue exploration
         
@@ -203,9 +239,6 @@ class Agent:
     def move_diagonal(self, limit_x1, limit_x2, limit_y1, limit_y2):
         x = self.x
         y = self.y
-        print("my position" , self.x, self.y)
-        print("last posi" , self.path[-1])
-        print("next posi" , x,y-1)
         moves = {
             1: (-1, 0),  # LEFT
             2: (1, 0),   # RIGHT
@@ -254,7 +287,6 @@ class Agent:
         elif x -1 < limit_x1 and (x,y-1) not in self.path:
             i = 0
             for i in range(0,4):
-                print("i :" , i)
                 movement = 3  #UP
                 self.last_move = movement
                 self.network.send({"header": MOVE, "direction": movement})
@@ -269,7 +301,6 @@ class Agent:
         elif y -1 < limit_y1 and x+1 <= limit_x2 and (x-1,y) not in self.path:
             i = 0
             for i in range(0,4):
-                print("i :" , i)
                 movement = 1  #LEFT
                 self.last_move = movement 
                 self.network.send({"header": MOVE, "direction": movement})
@@ -284,7 +315,6 @@ class Agent:
         elif y+1 >= limit_y2 and (x-1,y) not in self.path:
             i = 0
             for i in range(0,4):
-                print("i :" , i)
                 movement = 1  #LEFT
                 self.last_move = movement
                 self.network.send({"header": MOVE, "direction": movement})
@@ -299,7 +329,6 @@ class Agent:
         elif x >= limit_x2-1 :
             i = 0
             for i in range(0,4):
-                print("i :" , i)
                 movement = 3  #UP
                 self.last_move = movement
                 self.network.send({"header": MOVE, "direction": movement})
@@ -345,7 +374,6 @@ class Agent:
         y = self.y + dy
         
         #test des voisins pr check qu'il y a des dispo
-        print("cell_val", self.cell_val)
         neighbors = []
         for ddx, ddy in moves.values():
             nx, ny = self.x + ddx, self.y + ddy
@@ -629,7 +657,7 @@ if __name__ == "__main__":
 
     agent = Agent(args.server_ip)
     try : 
-        sleep(5)  
+        """sleep(5)  
         limit_x, limit_y = agent.choose_map_division()
         limit_x1 = limit_x[0]
         limit_x2 = limit_x[1]
@@ -638,9 +666,9 @@ if __name__ == "__main__":
         print("limit x2", limit_x2)
         print("Je part vers mon départ")
         agent.go_to_goal((limit_x2-2, limit_y2-4)) # Ce met en bas à gauche  
-        print("Je suis arrivé à mon départ")
+        print("Je suis arrivé à mon départ")"""
         while True: 
-            agent.move_diagonal(limit_x1, limit_x2, limit_y1, limit_y2)
+            agent.agent_management()
         try:    #Manual control test0
             while True:
                 cmds = {"header": int(input("0 <-> Broadcast msg\n1 <-> Get data\n2 <-> Move\n3 <-> Get nb connected agents\n4 <-> Get nb agents\n5 <-> Get item owner\n"))}
