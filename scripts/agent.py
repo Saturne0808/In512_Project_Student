@@ -229,11 +229,10 @@ class Agent:
             # if case already discovered
             if self.avoid_pattern():
                 print(f"PATTERN IGNORED")
-                for i in range(0,2):
-                    movement = self.last_move
-                    self.network.send({"header": MOVE, "direction": movement})
-                    sleep(0.5)
-                    self.path.append((self.x, self.y))
+                movement = self.last_move
+                self.network.send({"header": MOVE, "direction": movement})
+                sleep(0.5)
+                self.path.append((self.x, self.y))
                 
                 
                 # if closed to box
