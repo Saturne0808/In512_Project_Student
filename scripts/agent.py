@@ -134,7 +134,8 @@ class Agent:
         # continue exploration until all items have been found
         
         while len(self.detected_items) < self.total_objects:
-            print(f"Detected items: {len(self.detected_items)}/{self.total_objects}")
+            #print(f"Detected items: {len(self.detected_items)}/{self.total_objects}")
+            
             response= self.request_detected_items()
             self.detected_items = response.get("detected_items", [])
             # agent continue to move
