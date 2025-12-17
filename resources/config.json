@@ -53,7 +53,24 @@
         "box_4": {
             "x": 6,
             "y": 5
-        }
+        },
+        "obstacle_1": {"x": 10, "y": 10},
+        "obstacle_2": {"x": 10, "y": 11},
+        "obstacle_3": {"x": 10, "y": 12},
+        "obstacle_4": {"x": 9, "y": 12},
+        "obstacle_5": {"x": 25, "y": 10},
+        "obstacle_6": {"x": 25, "y": 11},
+        "obstacle_7": {"x": 25, "y": 12},
+        "obstacle_8": {"x": 24, "y": 12},
+        "obstacle_9": {"x": 5, "y": 24},
+        "obstacle_10": {"x": 5, "y": 25},
+        "obstacle_11": {"x": 5, "y": 26},
+        "obstacle_12": {"x": 6, "y": 26},
+        "obstacle_13": {"x": 25, "y": 24},
+        "obstacle_14": {"x": 25, "y": 25},
+        "obstacle_15": {"x": 25, "y": 26},
+        "obstacle_16": {"x": 24, "y": 26}
+
     },
 
     "map_2":{
@@ -110,7 +127,23 @@
         "box_4": {
             "x": 6,
             "y": 5
-        }
+        },
+        "obstacle_1": {"x": 10, "y": 10},
+        "obstacle_2": {"x": 10, "y": 11},
+        "obstacle_3": {"x": 10, "y": 12},
+        "obstacle_4": {"x": 9, "y": 12},
+        "obstacle_5": {"x": 25, "y": 10},
+        "obstacle_6": {"x": 25, "y": 11},
+        "obstacle_7": {"x": 25, "y": 12},
+        "obstacle_8": {"x": 24, "y": 12},
+        "obstacle_9": {"x": 5, "y": 24},
+        "obstacle_10": {"x": 5, "y": 25},
+        "obstacle_11": {"x": 5, "y": 26},
+        "obstacle_12": {"x": 6, "y": 26},
+        "obstacle_13": {"x": 25, "y": 24},
+        "obstacle_14": {"x": 25, "y": 25},
+        "obstacle_15": {"x": 25, "y": 26},
+        "obstacle_16": {"x": 24, "y": 26}
     },
 
     "map_3":{
@@ -167,6 +200,23 @@
         "box_4": {
             "x": 6,
             "y": 5
-        }
+        },
+        "obstacle_1": {"x": 10, "y": 10},
+        "obstacle_2": {"x": 10, "y": 11},
+        "obstacle_3": {"x": 10, "y": 12},
+        "obstacle_4": {"x": 9, "y": 12},
+        "obstacle_5": {"x": 25, "y": 10},
+        "obstacle_6": {"x": 25, "y": 11},
+        "obstacle_7": {"x": 25, "y": 12},
+        "obstacle_8": {"x": 24, "y": 12},
+        "obstacle_9": {"x": 5, "y": 24},
+        "obstacle_10": {"x": 5, "y": 25},
+        "obstacle_11": {"x": 5, "y": 26},
+        "obstacle_12": {"x": 6, "y": 26},
+        "obstacle_13": {"x": 25, "y": 24},
+        "obstacle_14": {"x": 25, "y": 25},
+        "obstacle_15": {"x": 25, "y": 26},
+        "obstacle_16": {"x": 24, "y": 26}
     }
+
 }

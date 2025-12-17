@@ -46,6 +46,11 @@ class GUI:
         agent_img = pygame.transform.scale(agent_img, (self.cell_size, self.cell_size))
         self.agents = [agent_img.copy() for _ in range(self.game.nb_agents)]
 
+        #added - obstacles_img 
+        obstacle_img = pygame.image.load(img_folder + "/obstacles.png")
+        obstacle_img = pygame.transform.scale(obstacle_img, (self.cell_size, self.cell_size))
+        self.obstacle_img = obstacle_img
+
     
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -96,4 +101,12 @@ class GUI:
             self.screen.blit(self.agents[i], self.agents[i].get_rect(center=(self.game.agents[i].x*self.cell_size + self.cell_size//2, self.game.agents[i].y*self.cell_size + self.cell_size//2)))
             self.screen.blit(self.text_agents[i], self.text_agents[i].get_rect(center=(self.game.agents[i].x*self.cell_size + self.cell_size-self.text_agents[i].get_width()//2, self.game.agents[i].y*self.cell_size + self.cell_size-self.text_agents[i].get_height()//2)))
 
+            # draw all obstacles from game.obstacles
+            for obs in self.game.obstacles:
+                pygame.draw.rect(self.screen, BLACK, (obs.x * self.cell_size, obs.y * self.cell_size, self.cell_size, self.cell_size), width=3)
+                self.screen.blit(self.obstacle_img, self.obstacle_img.get_rect(topleft=(obs.x * self.cell_size, obs.y * self.cell_size)))
+                
+        """#added - obstacles
+        for obstacle in self.game.obstacles:
+            self.screen.blit(self.obstacle_img, self.obstacle_img.get_rect(topleft=(obstacle.x*self.cell_size, obstacle.y*self.cell_size)))"""
         pygame.display.update()

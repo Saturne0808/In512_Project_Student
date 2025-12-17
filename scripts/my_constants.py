@@ -34,8 +34,11 @@ COMPLETED = 3   #inform other agents that you discovered your key and you reache
 GAME_ID = -1    #id of the game when it sends a message to an agent
 KEY_NEIGHBOUR_PERCENTAGE = 0.5  #value of an adjacent cell to a key
 BOX_NEIGHBOUR_PERCENTAGE = 0.6  #value of an adjacent cell to a key
+OBSTACLE_NEIGHBOUR_PERCENTAGE = 0.35  #value of an adjacent cell to an obstacle
+
 KEY_TYPE = 0    #one of the types of item that is output by the 'Get item owner' request
 BOX_TYPE = 1
+OBSTACLE_TYPE = 1
 
 #ADDED : 
 REGISTER_ITEM = "REGISTER_ITEM"
