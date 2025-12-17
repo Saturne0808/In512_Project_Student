@@ -99,6 +99,7 @@ class Agent:
     #TODO: CREATE YOUR METHODS HERE...
 
     #added : 
+    #Partie de martin
     def wait_for_response(self, header, timeout_iterations=10):
         """Wait for a specific response from msg_cb == avoid busy waiting"""
         for i in range(timeout_iterations):
@@ -134,8 +135,7 @@ class Agent:
         # continue exploration until all items have been found
         
         while len(self.detected_items) < self.total_objects:
-            #print(f"Detected items: {len(self.detected_items)}/{self.total_objects}")
-            
+
             response= self.request_detected_items()
             self.detected_items = response.get("detected_items", [])
             # agent continue to move
@@ -143,18 +143,18 @@ class Agent:
             
             # Request item owner info
             self.network.send({"header": GET_ITEM_OWNER})
-            
+
             # Get item owner response
             item_response = self.wait_for_response(GET_ITEM_OWNER)
             owner = item_response.get("owner")
             item_type = item_response.get("type")
-            sleep(0.2)
+
             # If agent is on an item 
             if owner is not None and item_type is not None:
                 
                 # Get current item coordinates
                 item_coords = (self.x, self.y)
-                sleep(0.2)
+                
                 # Check if item already registered
                 already_known = any(
                     item["x"] == item_coords[0] and item["y"] == item_coords[1]
@@ -362,6 +362,73 @@ class Agent:
             sleep(0.5)
             self.path.append((self.x, self.y))
 
+    def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
+        """ Method used to move the agent in the environment """
+        x = self.x
+        y = self.y
+        movement = randint(1,8)
+        moves = {
+            1: (-1, 0),  # LEFT
+            2: (1, 0),   # RIGHT
+            3: (0, -1),  # UP
+            4: (0, 1),   # DOWN
+            5: (-1, -1), # UP-LEFT
+            6: (1, -1),  # UP-RIGHT
+            7: (-1, 1),  # DOWN-LEFT
+            8: (1, 1),   # DOWN-RIGHT
+        }
+        dx, dy = moves.get(movement, (0,0))
+        x = self.x + dx
+        y = self.y + dy
+        
+        #test des voisins pr check qu'il y a des dispo
+        neighbors = []
+        for ddx, ddy in moves.values():
+            nx, ny = self.x + ddx, self.y + ddy
+            if limit_x1 <= nx < limit_x2 and limit_y1 <= ny < limit_y2:
+                neighbors.append((nx, ny))
+
+        #si il est entourer de voisins dans le path
+        blocked = len(neighbors) > 0 and all(n in self.path for n in neighbors)
+
+        if self.cell_val == 0.25 or self.cell_val == 0.3:
+            # if case already discovered
+            if self.avoid_pattern():
+                print(f"PATTERN IGNORED")
+                
+                # if closed to box
+            elif self.cell_val == 0.3:
+                #print("je suis proche d'une box")
+                self.search_box_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
+                self.path.append((self.x, self.y))
+                sleep(0.2)
+                return
+
+                #if closed to key
+            elif self.cell_val == 0.25:
+                #print("je suis proche d'une key")
+                self.search_key_around(moves,limit_x1, limit_x2, limit_y1, limit_y2)
+                self.path.append((self.x, self.y))
+                sleep(0.2)
+                return
+
+        if x < limit_x1 or x >= limit_x2 or y < limit_y1 or y >= limit_y2 and (x, y) != ((limit_x1,limit_y1) or (limit_x2-1, limit_y2-1) or (limit_x1, limit_y2-1) or (limit_x2-1, limit_y1)):
+            #print("je suis dans les limites avec ", x, y)
+            movement = 0   #STAND
+            #print("movement: ", movement, "my position: ", self.x, self.y)
+        elif (x, y) in self.path and not blocked :
+            movement = 0   #STAND
+            #print("je suis dans le path ", x, y)
+            #print("movement: ", movement, "my position: ", self.x, self.y)
+
+
+        else:
+            self.network.send({"header": MOVE, "direction": movement})
+            #print("movement: ", movement, "my position: ", self.x, self.y)
+        self.path.append((self.x, self.y))
+        sleep(0.2)
+
+
     def request_item_owner(self):
         """Demande synchrone au jeu quel est l'item sous le robot."""
         self.network.send({"header": GET_ITEM_OWNER})
@@ -420,7 +487,6 @@ class Agent:
                                 # Item étranger - ajouter aux foreign items
                                 self.foreign_items.add((self.x, self.y, owner, BOX_TYPE))
                                 self.positions.add((self.x, self.y))
-                                sleep(0.5)
                                 print(f"not my box on ({self.x}, {self.y}), owner: {owner}")
                                 
                                 for dx in [-1, 0, 1]:
@@ -433,7 +499,6 @@ class Agent:
                                 self.my_box_found = True
                                 self.BOXES_coordonates.append(((self.x, self.y), owner))
                                 self.positions.add((self.x, self.y))
-                                sleep(0.5)
                                 print(f"MY BOX ON ({self.x}, {self.y})!")
                                 for dx in [-1, 0, 1]:
                                     for dy in [-1, 0, 1]:
@@ -482,7 +547,7 @@ class Agent:
                             if owner is not None and owner != self.agent_id:    # NOT THE ID KEY
                                 self.foreign_items.add((self.x, self.y, owner, KEY_TYPE))  #say position, id and type of the key
                                 self.positions.add((self.x, self.y))  #save position of the key (used after to not turn around the key because of the pattern)
-                                sleep(0.5)
+                    
                                 
                                 for dx in [-1, 0, 1]:
                                     for dy in [-1, 0, 1]:
@@ -494,7 +559,7 @@ class Agent:
                                 self.my_key_found = True
                                 self.KEYS_coordonates.append(((self.x, self.y), owner))
                                 self.positions.add((self.x, self.y))
-                                sleep(0.5)
+                                
 
                                 for dx in [-1, 0, 1]:
                                     for dy in [-1, 0, 1]:
@@ -518,74 +583,67 @@ class Agent:
 #added : 
     #algo d'évitement d'obstacle
     def go_to_goal(self, goal):
-        previous_move = (0, 0)  
-        while self.x != goal[0] or self.y != goal[1] and self.running:
+        while self.x != goal[0] and self.y != goal[1] and self.running:
             dx = goal[0] - self.x
             dy = goal[1] - self.y
-            
-            # Calculate move direction towards goal (normalized to -1, 0, 1)
-            move_x = 1 if dx > 0 else -1 if dx < 0 else 0
-            move_y = 1 if dy > 0 else -1 if dy < 0 else 0
-            move = (move_x, move_y)
-            
-            if self.cell_val == 0.35:  # Obstacle detected
-                print("Obstacle detected, avoiding...")
-                # Go back one step
-                back_move = (-previous_move[0], -previous_move[1])
-                if back_move in self.move_to_str:
-                    direction = self.move_to_str[back_move]
-                    self.network.send({"header": MOVE, "direction": direction})
-                    sleep(0.2)
-                
-                # Try right-hand turn (perpendicular to previous move)
-                # For example, if previous was (1,0) -> right is (0,1); if (0,1) -> ( -1,0), etc.
-                if previous_move == (1, 0):
-                    avoid_move = (0, 1)  # Right
-                elif previous_move == (-1, 0):
-                    avoid_move = (0, -1)
-                elif previous_move == (0, 1):
-                    avoid_move = (-1, 0)
-                elif previous_move == (0, -1):
-                    avoid_move = (1, 0)
-                elif previous_move == (1, 1):
-                    avoid_move = (-1, 1)  # Approximate right for diagonal
-                elif previous_move == (-1, 1):
-                    avoid_move = (-1, -1)
-                elif previous_move == (1, -1):
-                    avoid_move = (1, 1)
-                elif previous_move == (-1, -1):
-                    avoid_move = (1, -1)
+            d = np.sqrt((goal[0] - self.x)**2 + ((goal[1] - self.y)**2))
+            denom = d/2
+            move = (int(dx/denom), int(dy/denom))
+            #if there is a wall
+            if self.cell_val == 0.35:
+                go_back = (previous_move[0]*(-1), previous_move[1]*(-1))
+                move = go_back
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                #go back 2 times
+                self.network.send(cmds)
+                sleep(0.2)
+                self.network.send(cmds)
+                sleep(0.2)
+
+
+                #compute avoiding direction in function of the previous move
+                avoid_direction_x = (dx/abs(dx))
+                avoid_direction_y = (dy/abs(dy))
+
+                if previous_move[0] == 0:
+                    avoid_direction = (avoid_direction_x,0)
+                elif previous_move[1] == 0:
+                    avoid_direction = (0,avoid_direction_y)
                 else:
-                    avoid_move = (1, 0)  # Default fallback
+                    if dy > dx:
+                        avoid_direction = (0,avoid_direction_y)
+                    else:
+                        avoid_direction = (avoid_direction_x, 0)
                 
-                if avoid_move in self.move_to_str:
-                    direction = self.move_to_str[avoid_move]
-                    self.network.send({"header": MOVE, "direction": direction})
+
+                move = avoid_direction
+                direction = self.move_to_str[move]
+                
+                for i in range(2):
+                    cmds = {"header": MOVE, "direction": direction}
+                    #do avoiding direction
+                    self.network.send(cmds)
+
                     sleep(0.2)
-                    # Check if still obstacle; if so, try the other perpendicular direction
+
+                    #if avoiding direction is obstacle, change the avoiding direction
                     if self.cell_val == 0.35:
-                        # Try left instead
-                        if previous_move == (1, 0):
-                            avoid_move = (0, -1)
-                        elif previous_move == (-1, 0):
-                            avoid_move = (0, 1)
-                        elif previous_move == (0, 1):
-                            avoid_move = (1, 0)
-                        elif previous_move == (0, -1):
-                            avoid_move = (-1, 0)
-                        # Add similar for diagonals if needed
-                        if avoid_move in self.move_to_str:
-                            direction = self.move_to_str[avoid_move]
-                            self.network.send({"header": MOVE, "direction": direction})
-                            sleep(0.2)
+                        break
+                        # move = (avoid_direction[0]*(-1), avoid_direction[1]*(-1))
+                        # direction = self.move_to_str[move]
+                    
+
+
             else:
-                # Normal move towards goal
-                if move in self.move_to_str:
-                    direction = self.move_to_str[move]
-                    self.network.send({"header": MOVE, "direction": direction})
-                    sleep(0.2)
-            
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                self.network.send(cmds)
+
             previous_move = move
+            #print(self.msg)
+
+            sleep(0.2)
 
 
  

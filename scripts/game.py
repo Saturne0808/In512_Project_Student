@@ -34,21 +34,18 @@ class Game:
         with open(json_filename, "r") as json_file:
             self.map_cfg = json.load(json_file)[f"map_{map_id}"]        
         
-        self.agents, self.keys, self.boxes, self.obstacles = [], [], [], []
+        self.agents, self.keys, self.boxes = [], [], []
         for i in range(self.nb_agents):
             self.agents.append(Agent(i+1, self.map_cfg[f"agent_{i+1}"]["x"], self.map_cfg[f"agent_{i+1}"]["y"], self.map_cfg[f"agent_{i+1}"]["color"]))
             self.keys.append(Key(self.map_cfg[f"key_{i+1}"]["x"], self.map_cfg[f"key_{i+1}"]["y"]))
             self.boxes.append(Box(self.map_cfg[f"box_{i+1}"]["x"], self.map_cfg[f"box_{i+1}"]["y"]))
-            for j in range(0,4):   #ADDED : each agent has 4 obstacles
-                self.obstacles.append(Obstacle(self.map_cfg[f"obstacle_{i*4 + j +1}"]["x"], self.map_cfg[f"obstacle_{i*4 + j +1}"]["y"]))
             self.agent_paths[i] = [(self.agents[i].x, self.agents[i].y)]
-       
+        
         self.map_w, self.map_h = self.map_cfg["width"], self.map_cfg["height"]
         self.map_real = np.zeros(shape=(self.map_h, self.map_w))
         items = []
         items.extend(self.keys)
         items.extend(self.boxes)
-        items.extend(self.obstacles)   #ADDED
         offsets = [[(-1, -1), (0, -1), (1, -1), (-1, 0), (0, 0), (1, 0), (-1, 1), (0, 1), (1, 1)], [(-2, -2), (-1, -2), (0, -2), (1, -2), (2, -2), (-2, -1), (2, -1), (-2, 0), (2, 0), (-2, 1), ( 2, 1), (-2, 2), (-1, 2), (0, 2), (1, 2), (2, 2)]]
         for item in items:
             for i, sub_list in enumerate(offsets):
@@ -145,8 +142,3 @@ class Key(Item):
 class Box(Item):
     def __init__(self, x, y):
         Item.__init__(self, x, y, BOX_NEIGHBOUR_PERCENTAGE, "box")
-
-#ADDED : 
-class Obstacle(Item):
-    def __init__(self, x, y):
-        Item.__init__(self, x, y, OBSTACLE_NEIGHBOUR_PERCENTAGE, "obstacle")
