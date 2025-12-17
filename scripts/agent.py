@@ -49,6 +49,8 @@ class Agent:
 
         # basic memories for discovered items
         self.detected_items = []
+        self.my_key_coords = None
+        self.my_box_coords = None
 
         #Part detections ! 
         self.KEYS_coordonates = []
@@ -122,24 +124,20 @@ class Agent:
         Stop Agent's observation when all items are detected and registered, and start a_start to reach keys and boxes
         """
         sleep(5)  
-        limit_x, limit_y = agent.choose_map_division()
+        limit_x, limit_y = self.choose_map_division()
         limit_x1 = limit_x[0]
         limit_x2 = limit_x[1]
         limit_y1 = limit_y[0]
         limit_y2 = limit_y[1]
-        agent.go_to_goal((limit_x2-2, limit_y2-3)) # Ce met en bas à gauche  
+        self.go_to_goal((limit_x2-2, limit_y2-3)) # Ce met en bas à gauche  
         self.total_objects = self.nb_agent_expected * 2
-        #print(len(self.detected_items), " items detected so far.")
-        #print(self.total_objects, " items to be detected in total.")
         
         # continue exploration until all items have been found
-        print("detected items:", len(self.detected_items))
+        
         while len(self.detected_items) < self.total_objects:
 
             response= self.request_detected_items()
             self.detected_items = response.get("detected_items", [])
-            print("detected items:", len(self.detected_items))
-            print("total items to find:", self.total_objects)
             # agent continue to move
             self.move_diagonal(limit_x1, limit_x2, limit_y1, limit_y2)
             
@@ -163,7 +161,7 @@ class Agent:
                     for item in self.detected_items
                 )
                 if not already_known:
-                    print("j'ai trouvé")
+                    print("j'ai trouver") #ne pas toucher
                     # rgister the item
                     self.network.send({
                         "header": REGISTER_ITEM,
@@ -176,16 +174,25 @@ class Agent:
                     
             else:
                 continue  # No item found, continue exploration
-        
-        # All items have been found => exploration is completed
-        # print("All items have been found => exploration phase complete")
-        # print(f"Keys found: {self.KEYS_coordonates}")
-        # print(f"Boxes found: {self.BOXES_coordonates}")
-        
-        # NOW Implement A* algorithm to:
-        # 1. Go to key
-        # 2. Go to box
+        response = self.request_detected_items()
+        self.detected_items = response.get("detected_items", [])
+        for item in self.detected_items:
+            if item["agent"] == self.agent_id:
+                if item["type"] == KEY_TYPE:
+                    self.my_key_coords = (item["x"], item["y"])
+                elif item["type"] == BOX_TYPE:
+                    self.my_box_coords = (item["x"], item["y"])
+        print("My key coords:", self.my_key_coords)
+        print("My box coords:", self.my_box_coords)
+        if self.my_key_found != True :
+            self.go_to_goal(self.my_key_coords)
+        print("key reached")
 
+        self.go_to_goal(self.my_box_coords)
+        print("box reached")
+
+        return(0)
+    
     def map_division(self): #Fonctionnel
         """ Method used to divide the map among agents """
         x = self.w
@@ -450,7 +457,6 @@ class Agent:
                 sleep(0.2)
             
             else :
-                print("LIMIT")
                 self.network.send({"header": MOVE, "direction": 0})
 
 
@@ -463,10 +469,8 @@ class Agent:
 
                     x = self.x + dx
                     y = self.y + dy
-                    if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
-                        print("LIMIT")
+                    if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:   
                         self.network.send({"header": MOVE, "direction": i})
-                        print(f"i : {i} cell value : {self.cell_val}")
                         sleep(0.2)
                 
                     else :
@@ -506,16 +510,13 @@ class Agent:
 
     def search_key_around(self,moves,limit_x1, limit_x2, limit_y1, limit_y2):
         """Teste les 8 cases autour"""
-        print("KEY PATTERN")
         directions = [3, 2, 4, 4, 1, 1, 3, 3]
-        
         for d in directions:
             dx, dy = moves.get(d, (0,0))
 
             x = self.x + dx
             y = self.y + dy
             if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
-                print("LIMIT")
                 self.network.send({"header": MOVE, "direction": d})
                 sleep(0.2)
             
@@ -523,7 +524,6 @@ class Agent:
                 self.network.send({"header": MOVE, "direction": 0})
 
             if self.cell_val == KEY_NEIGHBOUR_PERCENTAGE:
-                print("je suis dans le if apres le d")
                 directions = [3, 2, 4, 4, 1, 1, 3, 3]
                 for i in directions:
                     dx, dy = moves.get(i, (0,0))
@@ -532,9 +532,7 @@ class Agent:
                     y = self.y + dy
 
                     if limit_x1 <= x < limit_x2 and limit_y1 <= y < limit_y2:
-                        print("LIMIT")
                         self.network.send({"header": MOVE, "direction": i})
-                        print(f"i : {i} cell value : {self.cell_val}")
                         sleep(0.2)
                 
                     else :
@@ -549,7 +547,7 @@ class Agent:
                             if owner is not None and owner != self.agent_id:    # NOT THE ID KEY
                                 self.foreign_items.add((self.x, self.y, owner, KEY_TYPE))  #say position, id and type of the key
                                 self.positions.add((self.x, self.y))  #save position of the key (used after to not turn around the key because of the pattern)
-                                print(f"not my key on ({self.x}, {self.y}), owner: {owner}")
+                    
                                 
                                 for dx in [-1, 0, 1]:
                                     for dy in [-1, 0, 1]:
@@ -561,7 +559,7 @@ class Agent:
                                 self.my_key_found = True
                                 self.KEYS_coordonates.append(((self.x, self.y), owner))
                                 self.positions.add((self.x, self.y))
-                                print(f"MY KEY FOUND ON ({self.x}, {self.y})!")
+                                
 
                                 for dx in [-1, 0, 1]:
                                     for dy in [-1, 0, 1]:
