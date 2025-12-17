@@ -105,8 +105,8 @@ class GUI:
             for obs in self.game.obstacles:
                 pygame.draw.rect(self.screen, BLACK, (obs.x * self.cell_size, obs.y * self.cell_size, self.cell_size, self.cell_size), width=3)
                 self.screen.blit(self.obstacle_img, self.obstacle_img.get_rect(topleft=(obs.x * self.cell_size, obs.y * self.cell_size)))
-        
-        
-
-
+                
+        """#added - obstacles
+        for obstacle in self.game.obstacles:
+            self.screen.blit(self.obstacle_img, self.obstacle_img.get_rect(topleft=(obstacle.x*self.cell_size, obstacle.y*self.cell_size)))"""
         pygame.display.update()
