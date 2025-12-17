@@ -43,10 +43,9 @@ class Agent:
         self.cell_val = cell_val
         #ADD : 
         self.path = [(self.x, self.y)]
-        print(cell_val)
-        self.cell_val = float(cell_val)
-        #ADD : 
+        self.cell_val = float(cell_val) 
         self.path = [(self.x, self.y)]
+        self.last_move = 0
 
         # basic memories for discovered items
         self.detected_items = []
@@ -221,6 +220,7 @@ class Agent:
         if x + 1 > limit_x2 and y - 1 > limit_y1 :
 
             movement = 7  #DOWN-LEFT
+            self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
@@ -229,11 +229,12 @@ class Agent:
             # if case already discovered
             if self.avoid_pattern():
                 print(f"PATTERN IGNORED")
-                """
-                ICI LE PROBLEME FAIRE EN SORTE QUE LE ROBOT CE CASSE 
-                SINN BOUCLE INFINIE
-                """
-                pass
+                for i in range(0,2):
+                    movement = self.last_move
+                    self.network.send({"header": MOVE, "direction": movement})
+                    sleep(0.5)
+                    self.path.append((self.x, self.y))
+                
                 
                 # if closed to box
             elif self.cell_val == 0.3:
@@ -256,11 +257,13 @@ class Agent:
             for i in range(0,4):
                 print("i :" , i)
                 movement = 3  #UP
+                self.last_move = movement
                 self.network.send({"header": MOVE, "direction": movement})
                 sleep(0.5)
                 i += 1
                 self.path.append((self.x, self.y))
             movement = 6 #UP-LEFT
+            self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
@@ -269,11 +272,13 @@ class Agent:
             for i in range(0,4):
                 print("i :" , i)
                 movement = 1  #LEFT
+                self.last_move = movement 
                 self.network.send({"header": MOVE, "direction": movement})
                 sleep(0.5)
                 i += 1
                 self.path.append((self.x, self.y))
             movement = 7  #DOWN-LEFT
+            self.last_move= movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
@@ -282,11 +287,13 @@ class Agent:
             for i in range(0,4):
                 print("i :" , i)
                 movement = 1  #LEFT
+                self.last_move = movement
                 self.network.send({"header": MOVE, "direction": movement})
                 sleep(0.5)
                 i += 1
                 self.path.append((self.x, self.y))
             movement = 6  #UP-LEFT
+            self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
@@ -295,33 +302,29 @@ class Agent:
             for i in range(0,4):
                 print("i :" , i)
                 movement = 3  #UP
+                self.last_move = movement
                 self.network.send({"header": MOVE, "direction": movement})
                 sleep(0.5)
                 i += 1
                 self.path.append((self.x, self.y))
             movement = 7  #DOWN-LEFT
+            self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
             
         elif y -1 > limit_y1 - 1 and (x-1,y+1) in self.path:
             movement = 6 #UP-LEFT
+            self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-        
-        
-
-       
         else : 
             movement = 7  #DOWN-LEFT
+            self.last_move = movement
             self.network.send({"header": MOVE, "direction": movement})
             sleep(0.5)
             self.path.append((self.x, self.y))
-            
-            
-            
-        
 
     def move_agent(self,limit_x1, limit_x2, limit_y1, limit_y2):
         """ Method used to move the agent in the environment """
