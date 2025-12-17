@@ -142,3 +142,8 @@ class Key(Item):
 class Box(Item):
     def __init__(self, x, y):
         Item.__init__(self, x, y, BOX_NEIGHBOUR_PERCENTAGE, "box")
+
+#ADDED : 
+class Obstacle(Item):
+    def __init__(self, x, y):
+        Item.__init__(self, x, y, OBSTACLE_NEIGHBOUR_PERCENTAGE, "obstacle")
