@@ -578,74 +578,67 @@ class Agent:
 #added : 
     #algo d'évitement d'obstacle
     def go_to_goal(self, goal):
-        previous_move = (0, 0)  
-        while self.x != goal[0] or self.y != goal[1] and self.running:
+        while self.x != goal[0] and self.y != goal[1] and self.running:
             dx = goal[0] - self.x
             dy = goal[1] - self.y
-            
-            # Calculate move direction towards goal (normalized to -1, 0, 1)
-            move_x = 1 if dx > 0 else -1 if dx < 0 else 0
-            move_y = 1 if dy > 0 else -1 if dy < 0 else 0
-            move = (move_x, move_y)
-            
-            if self.cell_val == 0.35:  # Obstacle detected
-                print("Obstacle detected, avoiding...")
-                # Go back one step
-                back_move = (-previous_move[0], -previous_move[1])
-                if back_move in self.move_to_str:
-                    direction = self.move_to_str[back_move]
-                    self.network.send({"header": MOVE, "direction": direction})
-                    sleep(0.2)
-                
-                # Try right-hand turn (perpendicular to previous move)
-                # For example, if previous was (1,0) -> right is (0,1); if (0,1) -> ( -1,0), etc.
-                if previous_move == (1, 0):
-                    avoid_move = (0, 1)  # Right
-                elif previous_move == (-1, 0):
-                    avoid_move = (0, -1)
-                elif previous_move == (0, 1):
-                    avoid_move = (-1, 0)
-                elif previous_move == (0, -1):
-                    avoid_move = (1, 0)
-                elif previous_move == (1, 1):
-                    avoid_move = (-1, 1)  # Approximate right for diagonal
-                elif previous_move == (-1, 1):
-                    avoid_move = (-1, -1)
-                elif previous_move == (1, -1):
-                    avoid_move = (1, 1)
-                elif previous_move == (-1, -1):
-                    avoid_move = (1, -1)
+            d = np.sqrt((goal[0] - self.x)**2 + ((goal[1] - self.y)**2))
+            denom = d/2
+            move = (int(dx/denom), int(dy/denom))
+            #if there is a wall
+            if self.cell_val == 0.35:
+                go_back = (previous_move[0]*(-1), previous_move[1]*(-1))
+                move = go_back
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                #go back 2 times
+                self.network.send(cmds)
+                sleep(0.5)
+                self.network.send(cmds)
+                sleep(0.5)
+
+
+                #compute avoiding direction in function of the previous move
+                avoid_direction_x = (dx/abs(dx))
+                avoid_direction_y = (dy/abs(dy))
+
+                if previous_move[0] == 0:
+                    avoid_direction = (avoid_direction_x,0)
+                elif previous_move[1] == 0:
+                    avoid_direction = (0,avoid_direction_y)
                 else:
-                    avoid_move = (1, 0)  # Default fallback
+                    if dy > dx:
+                        avoid_direction = (0,avoid_direction_y)
+                    else:
+                        avoid_direction = (avoid_direction_x, 0)
                 
-                if avoid_move in self.move_to_str:
-                    direction = self.move_to_str[avoid_move]
-                    self.network.send({"header": MOVE, "direction": direction})
-                    sleep(0.2)
-                    # Check if still obstacle; if so, try the other perpendicular direction
+
+                move = avoid_direction
+                direction = self.move_to_str[move]
+                
+                for i in range(2):
+                    cmds = {"header": MOVE, "direction": direction}
+                    #do avoiding direction
+                    self.network.send(cmds)
+
+                    sleep(0.5)
+
+                    #if avoiding direction is obstacle, change the avoiding direction
                     if self.cell_val == 0.35:
-                        # Try left instead
-                        if previous_move == (1, 0):
-                            avoid_move = (0, -1)
-                        elif previous_move == (-1, 0):
-                            avoid_move = (0, 1)
-                        elif previous_move == (0, 1):
-                            avoid_move = (1, 0)
-                        elif previous_move == (0, -1):
-                            avoid_move = (-1, 0)
-                        # Add similar for diagonals if needed
-                        if avoid_move in self.move_to_str:
-                            direction = self.move_to_str[avoid_move]
-                            self.network.send({"header": MOVE, "direction": direction})
-                            sleep(0.2)
+                        break
+                        # move = (avoid_direction[0]*(-1), avoid_direction[1]*(-1))
+                        # direction = self.move_to_str[move]
+                    
+
+
             else:
-                # Normal move towards goal
-                if move in self.move_to_str:
-                    direction = self.move_to_str[move]
-                    self.network.send({"header": MOVE, "direction": direction})
-                    sleep(0.2)
-            
+                direction = self.move_to_str[move]
+                cmds = {"header": MOVE, "direction": direction}
+                self.network.send(cmds)
+
             previous_move = move
+            #print(self.msg)
+
+            sleep(0.5)
 
 
 
